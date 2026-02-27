@@ -5,7 +5,7 @@
 \docType{package}
 \title{contrastanalysis: Contrast Analysis with Equivalence Testing}
 \description{
-Implements the Pillaud (2025) contrast analysis framework integrated
+Implements contrast analysis integrated
 with Campbell (2023) TOST equivalence testing. The main function is
 \code{\link{contrast_analysis}}.
 }

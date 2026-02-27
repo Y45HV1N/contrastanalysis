@@ -1,6 +1,6 @@
 #' contrastanalysis: Contrast Analysis with Equivalence Testing
 #'
-#' Implements the Pillaud (2025) contrast analysis framework integrated
+#' Implements contrast analysis integrated
 #' with Campbell (2023) TOST equivalence testing. The main function is
 #' [contrast_analysis()].
 #'

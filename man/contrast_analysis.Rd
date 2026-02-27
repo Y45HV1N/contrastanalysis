@@ -83,7 +83,7 @@ all computed results (see Details in the R source or the tutorial).
 Decomposes between-group variance into a theory-driven contrast of
 interest and orthogonal residual contrasts, then tests whether the
 predicted pattern is significant (NHST) and whether deviations from it
-are negligibly small (TOST equivalence tests). Implements Pillaud (2025)
+are negligibly small (TOST equivalence tests). Integrates Campbell (2023)
 integrated with Campbell (2023) and the Intersection-Union Test (IUT;
 Berger, 1982).
 }
@@ -121,7 +121,4 @@ Campbell, H. (2023). Equivalence testing for contrast analysis.
 Lakens, D. (2017). Equivalence tests: A practical primer for \emph{t}
   tests, correlations, and meta-analyses. \emph{Social Psychological and
   Personality Science}, \emph{8}(4), 355--362.
-
-Pillaud, V. (2025). Testing specific hypotheses: A tutorial on contrast
-  analyses using R.
 }

@@ -2,7 +2,7 @@
 
 Contrast Analysis with Equivalence Testing for Residual Contrasts.
 
-Implements the Pillaud (2025) contrast analysis framework integrated with Campbell (2023) TOST equivalence testing. Uses the Intersection-Union Test (IUT; Berger, 1982) principle.
+Implements contrast analysis integrated with Campbell (2023) TOST equivalence testing. Uses the Intersection-Union Test (IUT; Berger, 1982) principle.
 
 ## Installation
 
@@ -62,4 +62,3 @@ After installation, use `?contrast_analysis` for the full help page.
 - Berger, R. L. (1982). Multiparameter hypothesis testing and acceptance sampling. *Technometrics*, *24*(4), 295-300.
 - Campbell, H. (2023). Equivalence testing for contrast analysis.
 - Lakens, D. (2017). Equivalence tests: A practical primer. *Social Psychological and Personality Science*, *8*(4), 355-362.
-- Pillaud, V. (2025). Testing specific hypotheses: A tutorial on contrast analyses using R.

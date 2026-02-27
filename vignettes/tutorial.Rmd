@@ -1,0 +1,735 @@
+---
+title: "Tutorial: Contrast Analysis with Equivalence Testing"
+subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial: Contrast Analysis with Equivalence Testing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center"
+)
+```
+
+# What Does This Function Do?
+
+In experimental psychology, we often predict a specific *pattern* of means
+across conditions. For example, we might predict that aggression increases
+linearly across three exposure conditions: Control < Low < High.
+
+A standard omnibus ANOVA tells us *whether the means differ*, but not
+*whether they differ in the way we predicted*. Contrast analysis solves
+this by decomposing the between-group variance into two parts:
+
+1. **The contrast of interest** --- the part of the variance that follows
+   your predicted pattern.
+2. **The residual contrasts** --- everything left over (i.e., deviations
+   from your predicted pattern).
+
+The `contrast_analysis()` function tests both pieces:
+
+- It runs **NHST** on the contrast of interest (is the predicted trend
+  significant?).
+- It runs **TOST equivalence tests** on each residual contrast (are the
+  deviations from the predicted pattern negligibly small?).
+
+The logic follows the **Intersection-Union Test (IUT)** principle (Berger,
+1982): because the tests are on orthogonal contrasts, no alpha correction
+is needed across them.
+
+## The Three Possible Conclusions
+
+| Conclusion | Meaning |
+|:---|:---|
+| **SUPPORTED** | The predicted trend is significant AND all residual deviations are equivalent to zero. |
+| **PARTIALLY SUPPORTED** | The predicted trend is significant, BUT at least one residual is not equivalent to zero. |
+| **NOT SUPPORTED** | The predicted trend is not significant. |
+
+## Key References
+
+- **Campbell (2024)** --- equivalence testing for linear regression.
+- **Berger (1982)** --- Intersection-Union Test (IUT).
+- **Lakens (2017)** --- TOST equivalence testing.
+
+
+# Setup
+
+```{r load-function}
+library(contrastanalysis)
+
+# We use MASS for data generation in this tutorial
+library(MASS)
+library(ggplot2)
+```
+
+
+# Your First Analysis: Between-Subjects
+
+## Create Some Data
+
+Imagine an experiment with four conditions --- A, B, C, D --- where we
+predict a linear dose--response: the dependent variable increases equally
+from A to D.
+
+```{r sim-between}
+set.seed(42)
+
+# 60 participants per group, true means = 2, 4, 6, 8, SD = 3
+n_per <- 60
+data_between <- data.frame(
+  group = rep(c("A", "B", "C", "D"), each = n_per),
+  score = c(
+    rnorm(n_per, mean = 2, sd = 3),
+    rnorm(n_per, mean = 4, sd = 3),
+    rnorm(n_per, mean = 6, sd = 3),
+    rnorm(n_per, mean = 8, sd = 3)
+  )
+)
+```
+
+## Run the Analysis
+
+There are five arguments you always need to specify:
+
+| Argument | What it is |
+|:---|:---|
+| `data` | Your data frame. |
+| `dv` | The name of your dependent variable column (as a string). |
+| `conditions` | The name of your grouping variable column (as a string). |
+| `hypothesis` | A **named numeric vector** specifying your predicted pattern. |
+| `delta` | The equivalence bound (how small is "negligible"?). |
+
+The `hypothesis` vector is the heart of the function. The **names** must
+match the levels of your grouping variable, and the **values** encode the
+predicted relative ordering. For a linear pattern across A, B, C, D:
+
+```{r run-between}
+result <- contrast_analysis(
+  data       = data_between,
+  dv         = "score",
+  conditions = "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3
+)
+```
+
+## Reading the Output
+
+The output is printed automatically. Let's walk through each section.
+
+### Contrast of Interest (NHST)
+
+This tests whether the linear trend you predicted is statistically
+significant. You'll see a regression coefficient (`b`), its standard error,
+a *t*-test, and a standardized effect size (`d = b / sigma`, where sigma is
+the square root of MSE).
+
+If this is significant, your predicted pattern is present in the data.
+
+### Residual Contrasts (TOST Equivalence Tests)
+
+For *k* = 4 groups there are *k* − 1 = 3 total degrees of freedom among
+means. One is used by your contrast of interest, leaving *k* − 2 = 2
+residual contrasts. These capture *everything your predicted pattern does
+not explain*.
+
+Each residual is tested with a **Two One-Sided Tests (TOST)** procedure.
+TOST asks: "Is this effect small enough to be considered equivalent to
+zero?" You'll see:
+
+- The standardized effect (`d`) and its **90% CI** (TOST-consistent).
+- Two one-sided *p*-values (`p1`, `p2`) and their maximum (`p_TOST`).
+- A verdict: **EQUIVALENT** or **NOT equivalent**.
+
+If p_TOST < alpha, the residual is declared equivalent to zero.
+
+### Variance Decomposition
+
+This shows what percentage of the model (between-group) variance is
+captured by your predicted pattern versus the residuals. Ideally, the
+contrast of interest accounts for nearly all of it (e.g., 95%+).
+
+### Conclusion
+
+The function combines the NHST and TOST results into one of three verdicts:
+SUPPORTED, PARTIALLY SUPPORTED, or NOT SUPPORTED (see Section 1.1).
+
+
+# The `hypothesis` Argument in Detail
+
+The hypothesis vector is flexible. The actual numbers don't matter --- only
+their *relative spacing*. All of these specify the same linear contrast:
+
+```{r hyp-equivalence, eval=FALSE}
+# These are all identical:
+hypothesis = c(A = 0, B = 1, C = 2, D = 3)
+hypothesis = c(A = 0, B = 0.5, C = 1, D = 1.5)
+hypothesis = c(A = 10, B = 20, C = 30, D = 40)
+```
+
+Internally, the function centers the values (subtracts their mean) and
+normalizes them to unit length.
+
+## Encoding Equality Constraints (Ties)
+
+You can predict that some conditions are **equal** by giving them the same
+value. For example, to test "[A = B] < [C = D]":
+
+```{r hyp-ties}
+set.seed(99)
+data_tie <- data.frame(
+  group = rep(c("A","B","C","D"), each = 50),
+  score = c(rnorm(50, 3, 2), rnorm(50, 3, 2),
+            rnorm(50, 7, 2), rnorm(50, 7, 2))
+)
+
+result_tie <- contrast_analysis(
+  data       = data_tie,
+  dv         = "score",
+  conditions = "group",
+  hypothesis = c(A = 0, B = 0, C = 1, D = 1),
+  delta      = 0.3,
+  graph1     = FALSE
+)
+```
+
+The output's "Hypothesized pattern" line will display: `[A = B] < [C = D]`.
+
+
+# Within-Subjects Designs
+
+The function also handles repeated-measures data. The key differences:
+
+- Data must be in **wide format** (one row per participant, one column per
+  condition).
+- Set `design = "within"`.
+- Set `dv = NULL` and `conditions = NULL`.
+- Provide the participant ID column with `id`.
+
+```{r sim-within}
+set.seed(77)
+
+n <- 50
+Sigma <- matrix(c(9, 4.5, 4.5,
+                  4.5, 9, 4.5,
+                  4.5, 4.5, 9), nrow = 3)
+scores <- MASS::mvrnorm(n, mu = c(5, 8, 8), Sigma = Sigma)
+
+data_within <- data.frame(
+  pid   = 1:n,
+  Ctrl  = scores[, 1],
+  DrugA = scores[, 2],
+  DrugB = scores[, 3]
+)
+```
+
+Here we predict that the control is lower than both drug conditions, which
+are equal to each other:
+
+```{r run-within}
+result_within <- contrast_analysis(
+  data       = data_within,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Ctrl = 0, DrugA = 1, DrugB = 1),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.3
+)
+```
+
+For within-subjects designs, the effect size is **d_z** (the mean of
+within-subject contrast scores divided by their standard deviation).
+
+
+# Understanding `delta`: The Equivalence Bound
+
+The `delta` parameter is perhaps the most important decision you make. It
+defines "how small is small enough?" for the residual contrasts. If a
+residual's standardized effect falls within ±delta, it's declared
+equivalent to zero.
+
+## What Does Delta Mean?
+
+Delta is expressed in **standardized units** (Cohen's *d* scale):
+
+- Between-subjects: *d* = *b* / sigma, where sigma = sqrt(MSE).
+- Within-subjects: *d_z* = *M* / *SD* of contrast scores.
+
+A delta of 0.3 means: "I consider a residual negligible if its standardized
+effect is smaller than 0.3 in absolute value."
+
+## How to Choose Delta
+
+There is no single correct value. Your choice should be justified on
+substantive grounds. Some approaches:
+
+1. **Anchor to effect-size benchmarks.** If your field considers *d* = 0.20
+   a "small" effect, you might set delta = 0.20 (anything smaller than
+   "small" is negligible).
+2. **Anchor to the smallest effect size of interest (SESOI).** If your
+   theory says an effect below *d* = 0.15 is theoretically meaningless, set
+   delta = 0.15.
+3. **Anchor to practical significance.** What is the smallest deviation
+   from your predicted pattern that would change your theoretical
+   conclusions?
+
+Tighter bounds (smaller delta) are more conservative --- they require
+stronger evidence that the residuals are truly small. But they also require
+larger sample sizes.
+
+## Specifying Different Deltas for Each Residual
+
+For *k* groups there are *k* − 2 residual contrasts. You can set a single
+delta (applied to all) or a vector of deltas (one per residual):
+
+```{r delta-vector}
+# Same bound for all residuals
+result_same <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  graph1     = FALSE
+)
+
+# Different bounds: stricter for Residual 1, more lenient for Residual 2
+result_diff <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = c(0.15, 0.40),
+  graph1     = FALSE
+)
+```
+
+
+# Equivalence Bounds from % of Model Variance (`delta_type = "share_signal"`)
+
+Sometimes it's more natural to think about equivalence in relative terms:
+"I want each residual to account for no more than X% of the model
+variance." The `share_signal` feature lets you specify bounds this way.
+
+## The Idea
+
+Your predicted pattern and the residuals together make up 100% of the model
+(between-group) variance. If your pattern is a good approximation, the
+residuals should account for only a tiny fraction of this total. Setting
+`delta_type = "share_signal"` lets you define "negligible" as a maximum
+tolerable percentage.
+
+## How It Works
+
+The function converts your percentage into a *d*-scale bound using the
+formula:
+
+$$
+\delta_d = d_{\text{interest, min}} \times \sqrt{\frac{p}{1 - p}}
+$$
+
+where *p* is your maximum tolerable share (e.g., 0.05 for 5%) and
+*d*~interest, min~ is a reference effect size you supply for the contrast of
+interest. After this conversion, the existing TOST machinery runs on the
+converted *d* bound --- nothing else changes.
+
+## The Two Required Inputs
+
+| Argument | What it is |
+|:---|:---|
+| `delta` | The maximum tolerable % of model variance per residual (between 0 and 100). |
+| `d_interest_min` | Your pre-specified SESOI for the contrast of interest, in standardized *d* units. |
+
+You need `d_interest_min` because "5% of model variance" only translates
+into a concrete *d* bound if you know (or specify) how large the main
+effect is. This keeps the equivalence bounds **fixed and pre-specified**,
+which is essential for valid frequentist inference.
+
+## Example
+
+Suppose you predict a linear dose--response, and you want each residual to
+account for no more than 5% of the model variance, assuming the contrast of
+interest is at least *d* = 0.80 (your SESOI for the main trend):
+
+```{r share-signal-example}
+result_share <- contrast_analysis(
+  data       = data_between,
+  dv         = "score",
+  conditions = "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 5,
+  delta_type = "share_signal",
+  d_interest_min = 0.80,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+Notice the additional sections in the output:
+
+- **Equivalence bounds (converted to d-scale):** Shows the % you specified
+  and the corresponding *d* bound.
+- **Share-Based Equivalence Interpretation:** Documents the conversion
+  formula and its assumptions.
+
+## Some Intuition for the Conversion
+
+Here's how different share thresholds translate to *d* bounds when
+*d*~interest, min~ = 1.0:
+
+```{r conversion-table, echo=FALSE}
+shares <- c(1, 2, 5, 10, 20, 50)
+d_bounds <- 1.0 * sqrt((shares/100) / (1 - shares/100))
+knitr::kable(
+  data.frame(
+    `Max Share (%)` = shares,
+    `d Bound` = round(d_bounds, 4)
+  ),
+  col.names = c("Max Share (%)", "Converted d Bound"),
+  align = "cc",
+  caption = "Conversion from share to d bound (d_interest_min = 1.0)"
+)
+```
+
+Key observations:
+
+- A 5% share corresponds to *d* ≈ 0.23 --- quite stringent.
+- A 50% share corresponds to *d* = 1.0 --- very lenient (residuals as
+  large as the interest effect would still pass).
+- Smaller `d_interest_min` values produce proportionally tighter bounds.
+
+## When to Use `share_signal` vs. `dz`
+
+| Use `dz` (the default) when... | Use `share_signal` when... |
+|:---|:---|
+| You have a substantive SESOI in *d* units for the residuals. | You think in terms of "% of variance explained." |
+| Your field has established benchmarks for "negligible" effects. | You have a clear SESOI for the main effect but not for residuals. |
+| You want the simplest, most transparent specification. | You want bounds that are interpretable relative to the main signal. |
+
+Both modes run the same underlying TOST. The only difference is how you
+*specify* the bound.
+
+
+# Graphs
+
+The function produces two types of plots, both controlled by arguments.
+
+## Forest Plot (`graph1`)
+
+The forest plot displays point estimates and confidence intervals for the
+contrast of interest and all residual contrasts on a single *d* axis:
+
+```{r forest-plot}
+p_forest <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  graph1.only = TRUE
+)
+p_forest
+```
+
+### How to Read It
+
+- **Contrast of interest** (top row): The 95% CI for *d*. Colored
+  **green** if the CI excludes zero (significant), **red** if it includes
+  zero (not significant).
+- **Residual contrasts** (lower rows): The 90% CI for *d*
+  (TOST-consistent). Colored **green** if the entire CI falls within the
+  equivalence bounds (the shaded blue region), **red** if any part of the
+  CI extends beyond the bounds.
+- **Shaded region**: The equivalence bounds (±delta). If you specified
+  different deltas per residual, the shaded region spans the largest delta,
+  and each residual is colored against its own individual bound.
+- **Dashed vertical line**: Zero.
+
+### When to Use `graph1.only`
+
+If you just want the ggplot object (e.g., to customize or save it), use
+`graph1.only = TRUE`. This returns the plot without printing the full text
+output:
+
+```{r save-forest, eval=FALSE}
+p <- contrast_analysis(..., graph1.only = TRUE)
+ggsave("my_forest_plot.png", p, width = 7, height = 4, dpi = 300)
+```
+
+## Variance Decomposition Plot (`graph2`)
+
+This bar chart shows what percentage of the model variance is accounted for
+by each contrast:
+
+```{r variance-plot}
+p_var <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  graph2.only = TRUE
+)
+p_var
+```
+
+The contrast of interest bar is filled (dark grey); residual bars are
+outlined with dashed lines. In a well-fitting model, the contrast of
+interest should dominate (95%+).
+
+## Showing Both Plots Together
+
+Set `graph1 = TRUE` and `graph2 = TRUE` to print both alongside the full
+text output:
+
+```{r both-plots, eval=FALSE}
+result <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+
+# Working with the Return Object
+
+The function prints its output automatically, but it also **invisibly
+returns** a list containing all computed values. You can capture this for
+further use:
+
+```{r return-object}
+result <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  graph1     = FALSE
+)
+```
+
+Here are some useful things you can extract:
+
+```{r extract-results}
+# The qualitative conclusion
+result$conclusion
+
+# The contrast of interest effect size and p-value
+result$interest$d
+result$interest$p
+
+# Residual 1's TOST p-value
+result$residuals[[1]]$p_tost
+
+# Whether each residual was declared equivalent
+result$residuals_equiv
+
+# Variance decomposition percentages
+result$variance$pct_interest
+result$variance$pct_residuals
+
+# The APA-formatted text (copy-paste ready)
+cat(result$apa)
+```
+
+The full list of returned elements is documented in the table below:
+
+```{r return-table, echo=FALSE}
+elements <- data.frame(
+  Element = c(
+    "interest", "residuals", "model", "design", "hypothesis",
+    "hyp_levels", "w_interest", "residual_basis", "n_residuals",
+    "delta_vec", "delta_type", "delta_share_pct", "d_interest_min",
+    "alpha", "alpha_tost", "is_orthogonal", "bonferroni_applied",
+    "contrast_matrix", "k", "conclusion", "conclusion_text",
+    "residuals_equiv", "apa", "variance", "plot_forest", "plot_variance"
+  ),
+  Description = c(
+    "List with b, se, t, df, p, d, se_d, ci_b, ci_d for the contrast of interest.",
+    "List of lists, one per residual, each with NHST + TOST results.",
+    "The fitted lm object (between-subjects) or NULL (within-subjects).",
+    "'between' or 'within'.",
+    "The hypothesis vector you supplied.",
+    "Character vector of condition names (in hypothesis order).",
+    "Normalized contrast weights for the interest contrast.",
+    "Matrix of residual contrast weights (k x (k-2)).",
+    "Number of residual contrasts (k - 2).",
+    "Numeric vector of equivalence bounds in d units (after conversion if share_signal).",
+    "'dz' or 'share_signal'.",
+    "The share percentages you specified (NA if delta_type = 'dz').",
+    "The reference d for the interest contrast (NA if delta_type = 'dz').",
+    "The alpha level used.",
+    "The alpha level used for TOST (may differ if Bonferroni applied).",
+    "TRUE if all contrasts are orthogonal.",
+    "TRUE if Bonferroni correction was applied to TOST alpha.",
+    "Full contrast matrix (interest + residuals).",
+    "Number of groups/conditions.",
+    "'SUPPORTED', 'PARTIALLY SUPPORTED', or 'NOT SUPPORTED'.",
+    "A plain-English sentence summarizing the conclusion.",
+    "Logical vector: TRUE for each residual declared equivalent.",
+    "APA-formatted results string.",
+    "List with ss_interest, ss_residuals, ss_model, pct_interest, pct_residuals.",
+    "ggplot object for the forest plot (NULL if graph1 = FALSE).",
+    "ggplot object for the variance plot (NULL if graph2 = FALSE)."
+  )
+)
+knitr::kable(elements, align = "ll")
+```
+
+
+# Confirming Your Setup Before Running (`confirm = TRUE`)
+
+If you want to verify that the function has interpreted your hypothesis
+correctly before it runs the analysis, use `confirm = TRUE`:
+```{r confirm-example, eval=FALSE}
+result <- contrast_analysis(
+  data_between, "score", "group",
+  hypothesis = c(A = 0, B = 1, C = 2, D = 3),
+  delta      = 0.3,
+  confirm    = TRUE
+)
+```
+
+This will print:
+
+- The hypothesized pattern in plain language (e.g., `A < B < C < D`).
+- The normalized contrast weights.
+- All residual contrast weights.
+- The orthogonality status.
+- The equivalence bounds.
+
+It then pauses and waits for you to press Enter to continue (or Esc to
+abort). This is especially helpful when you're learning the function or
+when your hypothesis has equality constraints.
+
+
+# Putting It All Together: A Complete Worked Example
+
+Let's walk through a realistic scenario from start to finish.
+
+**Research question:** We exposed participants to 0, 1, 3, or 5 hours of
+violent video game play and measured subsequent aggression. We predict a
+linear dose--response relationship. We consider residual deviations
+negligible if they account for less than 5% of the model variance, and our
+SESOI for the main linear trend is *d* = 0.50.
+
+```{r worked-example}
+set.seed(123)
+
+# Simulate data
+aggression_data <- data.frame(
+  hours = rep(c("0hr", "1hr", "3hr", "5hr"), each = 75),
+  aggression = c(
+    rnorm(75, mean = 3.0, sd = 2.5),
+    rnorm(75, mean = 4.2, sd = 2.5),
+    rnorm(75, mean = 5.8, sd = 2.5),
+    rnorm(75, mean = 7.5, sd = 2.5)
+  )
+)
+
+# Run contrast analysis
+result_full <- contrast_analysis(
+  data       = aggression_data,
+  dv         = "aggression",
+  conditions = "hours",
+  hypothesis = c(`0hr` = 0, `1hr` = 1, `3hr` = 3, `5hr` = 5),
+  delta      = 5,
+  delta_type = "share_signal",
+  d_interest_min = 0.50,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+**Note the hypothesis values.** We didn't use c(0, 1, 2, 3) --- we used
+c(0, 1, 3, 5) to match the actual hours of exposure. This means we're
+predicting that aggression scales with actual dose, not ordinal position.
+The spacing matters: we expect the jump from 1hr to 3hr to be twice as
+large as the jump from 0hr to 1hr.
+
+### Interpreting the APA Output
+
+The `result_full$apa` field gives you copy-paste-ready text for your
+results section:
+
+```{r apa-output}
+cat(result_full$apa)
+```
+
+
+# Quick Reference: All Function Arguments
+
+```{r args-table, echo=FALSE}
+args_df <- data.frame(
+  Argument = c(
+    "data", "dv", "conditions", "hypothesis",
+    "design", "id",
+    "delta", "delta_type", "d_interest_min",
+    "alpha", "confirm", "bonferroni",
+    "graph1", "graph1.only",
+    "graph2", "graph2.only"
+  ),
+  Default = c(
+    "(required)", "(required)", "(required)", "(required)",
+    '"between"', "NULL",
+    "0.3", '"dz"', "NULL",
+    "0.05", "FALSE", "TRUE",
+    "TRUE", "FALSE",
+    "FALSE", "FALSE"
+  ),
+  Description = c(
+    "Data frame containing the data.",
+    "Name of the DV column (string). Set NULL for within-subjects.",
+    "Name of the grouping variable column (string). Set NULL for within-subjects.",
+    "Named numeric vector: names = condition labels, values = predicted pattern.",
+    "'between' or 'within'.",
+    "Name of the participant ID column (required for within-subjects).",
+    "Equivalence bound(s). Scalar (same for all residuals) or vector (one per residual). Units depend on delta_type.",
+    "'dz' (bound in d units) or 'share_signal' (bound in % of model variance).",
+    "SESOI for the contrast of interest in d units. Required when delta_type = 'share_signal'.",
+    "Significance level.",
+    "If TRUE, display the setup and pause for confirmation before running.",
+    "If TRUE and contrasts are non-orthogonal, apply Bonferroni to TOST alpha. (Auto-generated contrasts are always orthogonal, so this rarely activates.)",
+    "If TRUE, display the forest plot.",
+    "If TRUE, return ONLY the forest plot (as a ggplot object), skip all other output.",
+    "If TRUE, display the variance decomposition plot.",
+    "If TRUE, return ONLY the variance plot (as a ggplot object), skip all other output."
+  )
+)
+knitr::kable(args_df, align = "lll")
+```
+
+
+# Common Questions
+
+**Q: Do I need at least 3 groups?**
+Yes. With only 2 groups, there is no residual subspace --- a standard
+*t*-test is sufficient. The function will stop with an error if *k* < 3.
+
+**Q: Does the order of names in the hypothesis vector matter?**
+No. The function matches names to factor levels, not positions. `c(B = 1,
+A = 0, C = 2)` is identical to `c(A = 0, B = 1, C = 2)`.
+
+**Q: What if my groups have unequal sample sizes?**
+The function handles unbalanced designs. The contrast weights and TOST
+tests are computed from the fitted linear model, which accommodates unequal
+*n*. However, the variance decomposition percentages and the `share_signal`
+conversion are most cleanly interpretable with balanced designs.
+
+**Q: Can I use this with more than 6 groups?**
+Yes. The function works for any *k* ≥ 3. With *k* groups you'll get
+*k* − 2 residual contrasts.
+
+**Q: What are the residual contrasts, exactly?**
+They are an orthonormal basis for the subspace orthogonal to both the
+intercept and your contrast of interest. The function computes them
+automatically using `MASS::Null()`. The specific basis vectors are
+arbitrary (any rotation within this subspace would work), but their joint
+behavior is invariant --- if any deviation from your pattern exists, at
+least one residual will detect it.
+
+**Q: Is the alpha correction handled automatically?**
+Yes. The function uses the Intersection-Union Test (IUT) principle: because
+the contrasts are orthogonal, the overall Type I error rate is at most
+alpha without any correction. Within each TOST, each one-sided test is
+conducted at alpha (not alpha/2), following Lakens (2017).
+

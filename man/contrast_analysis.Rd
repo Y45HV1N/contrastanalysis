@@ -83,8 +83,8 @@ all computed results (see Details in the R source or the tutorial).
 Decomposes between-group variance into a theory-driven contrast of
 interest and orthogonal residual contrasts, then tests whether the
 predicted pattern is significant (NHST) and whether deviations from it
-are negligibly small (TOST equivalence tests). Integrates Campbell (2023)
-integrated with Campbell (2023) and the Intersection-Union Test (IUT;
+are negligibly small (TOST equivalence tests). Integrates Campbell (2024)
+integrated with Campbell (2024) and the Intersection-Union Test (IUT;
 Berger, 1982).
 }
 \details{
@@ -116,7 +116,9 @@ result <- contrast_analysis(
 Berger, R. L. (1982). Multiparameter hypothesis testing and acceptance
   sampling. \emph{Technometrics}, \emph{24}(4), 295--300.
 
-Campbell, H. (2023). Equivalence testing for contrast analysis.
+Campbell, H. (2024). Equivalence testing for linear regression.
+  \emph{Psychological Methods}, \emph{29}(1), 88--98.
+  https://doi.org/10.1037/met0000596
 
 Lakens, D. (2017). Equivalence tests: A practical primer for \emph{t}
   tests, correlations, and meta-analyses. \emph{Social Psychological and

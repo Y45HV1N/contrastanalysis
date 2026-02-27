@@ -3,8 +3,8 @@ Title: Contrast Analysis with Equivalence Testing for Residual Contrasts
 Version: 1.0.0
 Authors@R: 
     person("Yashvin", "Seetahul", role = c("aut", "cre"),
-           email = "your.email@example.com")
-Description: Implements contrast analysis integrated with Campbell (2023) 
+           email = "Yashvin.Seetahul@uibk.ac.at")
+Description: Implements contrast analysis integrated with Campbell (2024) 
     TOST equivalence testing. Decomposes 
     between-group variance into a theory-driven contrast of interest and 
     orthogonal residual contrasts, then tests whether the predicted pattern 

@@ -6,6 +6,6 @@
 \title{contrastanalysis: Contrast Analysis with Equivalence Testing}
 \description{
 Implements contrast analysis integrated
-with Campbell (2023) TOST equivalence testing. The main function is
+with Campbell (2024) TOST equivalence testing. The main function is
 \code{\link{contrast_analysis}}.
 }

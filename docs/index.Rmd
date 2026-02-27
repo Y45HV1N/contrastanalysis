@@ -75,6 +75,8 @@ is needed across them.
 # Setup
 
 ```{r load-function}
+#devtools::install_github("Y45HV1N/contrastanalysis", build_vignettes = TRUE)
+
 library(contrastanalysis)
 
 # We use MASS for data generation in this tutorial

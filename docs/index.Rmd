@@ -1,7 +1,7 @@
 ---
 title: "Tutorial: Contrast Analysis with Equivalence Testing"
-subtitle: "A Guide to `contrast_analysis()`"
-author: "Yashvin Seetahul"
+subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
+author: ""
 date: "Last updated: `r Sys.Date()`"
 output:
   html_document:

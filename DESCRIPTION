@@ -3,7 +3,8 @@ Title: Contrast Analysis with Equivalence Testing for Residual Contrasts
 Version: 1.0.0
 Authors@R: 
     person("Yashvin", "Seetahul", role = c("aut", "cre"),
-           email = "Yashvin.Seetahul@uibk.ac.at")
+           email = "Yashvin.Seetahul@uibk.ac.at",
+           comment = c(ORCID = "0000-0001-7487-3398"))
 Description: Implements contrast analysis integrated with Campbell (2024) 
     TOST equivalence testing. Decomposes 
     between-group variance into a theory-driven contrast of interest and 
@@ -14,7 +15,7 @@ Description: Implements contrast analysis integrated with Campbell (2024)
     Supports between-subjects and within-subjects designs, standardized 
     (d) and share-of-variance equivalence bounds, forest plots, and 
     variance decomposition plots.
-License: MIT + file LICENSE
+License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

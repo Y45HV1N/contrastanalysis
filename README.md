@@ -75,6 +75,8 @@ If you use this package in your research, please cite it as:
 
 > Seetahul, Y. (2026). *contrastanalysis: Contrast Analysis with Equivalence Testing for Residual Contrasts*. R package version 1.0.0. https://github.com/Y45HV1N/contrastanalysis
 
+**Author ORCID:** [0000-0001-7487-3398](https://orcid.org/0000-0001-7487-3398)
+
 Or in BibTeX:
 
 ```bibtex
@@ -97,3 +99,7 @@ citation("contrastanalysis")
 
 - Campbell, H. (2024). Equivalence testing for linear regression. *Psychological Methods*, *29*(1), 88–98. https://doi.org/10.1037/met0000596
 - Lakens, D. (2017). Equivalence tests: A practical primer. *Social Psychological and Personality Science*, *8*(4), 355-362.
+
+## License
+
+Copyright © 2026 Yashvin Seetahul. Licensed under [GPL-3](https://www.gnu.org/licenses/gpl-3.0.en.html). You are free to use, modify, and redistribute this package. If you use it in academic work, please cite it (see above).

@@ -22,7 +22,7 @@ devtools::install("path/to/contrastanalysis")
 ### From GitHub (once pushed)
 
 ```r
-devtools::install_github("yourusername/contrastanalysis")
+devtools::install_github("Y45HV1N/contrastanalysis")
 ```
 
 ## Quick Start

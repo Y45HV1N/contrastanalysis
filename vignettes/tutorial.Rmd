@@ -1,6 +1,7 @@
 ---
 title: "Tutorial: Contrast Analysis with Equivalence Testing"
-subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
+subtitle: "A Guide to `contrast_analysis()`"
+author: "Yashvin Seetahul"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Tutorial: Contrast Analysis with Equivalence Testing}

@@ -1,0 +1,8 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "contrastanalysis: Contrast Analysis with Equivalence Testing for Residual Contrasts",
+  author   = person("Yashvin", "Seetahul"),
+  year     = "2026",
+  url      = "https://github.com/Y45HV1N/contrastanalysis",
+  note     = "R package version 1.0.0"
+)

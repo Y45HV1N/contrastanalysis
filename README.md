@@ -59,6 +59,30 @@ result <- contrast_analysis(
 - **Vignette (after installing):** `vignette("tutorial", package = "contrastanalysis")`
 - **Help page:** `?contrast_analysis`
 
+## Citation
+
+If you use this package in your research, please cite it as:
+
+> Seetahul, Y. (2026). *contrastanalysis: Contrast Analysis with Equivalence Testing for Residual Contrasts*. R package version 1.0.0. https://github.com/Y45HV1N/contrastanalysis
+
+Or in BibTeX:
+
+```bibtex
+@Manual{seetahul2026contrastanalysis,
+  title  = {contrastanalysis: Contrast Analysis with Equivalence Testing for Residual Contrasts},
+  author = {Yashvin Seetahul},
+  year   = {2026},
+  note   = {R package version 1.0.0},
+  url    = {https://github.com/Y45HV1N/contrastanalysis}
+}
+```
+
+In R, after installing the package, you can also retrieve the citation with:
+
+```r
+citation("contrastanalysis")
+```
+
 ## References
 
 - Berger, R. L. (1982). Multiparameter hypothesis testing and acceptance sampling. *Technometrics*, *24*(4), 295-300.

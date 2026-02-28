@@ -1,7 +1,10 @@
 ---
 title: "Tutorial: Contrast Analysis with Equivalence Testing"
 subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
-author: ""
+author:
+  - name: "Yashvin Seetahul"
+    orcid_id: "0000-0001-7487-3398"
+    affiliation: "University of Innsbruck"
 date: "Last updated: `r Sys.Date()`"
 output:
   html_document:

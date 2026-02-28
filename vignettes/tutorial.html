@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Tutorial: Contrast Analysis with Equivalence Testing</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Tutorial: Contrast Analysis with
+Equivalence Testing</h1>
+<h3 class="subtitle">A Beginner-Friendly Guide to
+<code>contrast_analysis()</code></h3>
+<h4 class="author">Yashvin Seetahul</h4>
+<address class="author_afil">
+University of Innsbruck<br>
+
+
+<div id="what-does-this-function-do" class="section level1">
+<h1>What Does This Function Do?</h1>
+<p>In experimental psychology, we often predict a specific
+<em>pattern</em> of means across conditions. For example, we might
+predict that aggression increases linearly across three exposure
+conditions: Control &lt; Low &lt; High.</p>
+<p>A standard omnibus ANOVA tells us <em>whether the means differ</em>,
+but not <em>whether they differ in the way we predicted</em>. Contrast
+analysis solves this by decomposing the between-group variance into two
+parts:</p>
+<ol style="list-style-type: decimal">
+<li><strong>The contrast of interest</strong> — the part of the variance
+that follows your predicted pattern.</li>
+<li><strong>The residual contrasts</strong> — everything left over
+(i.e., deviations from your predicted pattern).</li>
+</ol>
+<p>The <code>contrast_analysis()</code> function tests both pieces:</p>
+<ul>
+<li>It runs <strong>NHST</strong> on the contrast of interest (is the
+predicted trend significant?).</li>
+<li>It runs <strong>TOST equivalence tests</strong> on each residual
+contrast (are the deviations from the predicted pattern negligibly
+small?).</li>
+</ul>
+<p>The logic follows the <strong>Intersection-Union Test (IUT)</strong>
+principle (Berger, 1982): because the tests are on orthogonal contrasts,
+no alpha correction is needed across them.</p>
+<div id="why-this-function-the-problem-with-traditional-residual-testing" class="section level2">
+<h2>Why This Function? The Problem with Traditional Residual
+Testing</h2>
+<p>The traditional “Contrast + Residual” (C+R) approach tests both the
+contrast of interest and the residual contrasts using NHST. The
+reasoning goes: if the contrast of interest is significant and the
+residuals are not significant, the predicted pattern is confirmed.</p>
+<p>The problem is that <strong>a non-significant residual does not mean
+the residual is zero</strong>. This is a textbook logical error: absence
+of evidence is not evidence of absence (Altman &amp; Bland, 1995;
+Hartung et al., 1983). A non-significant <em>p</em>-value for a residual
+contrast could mean the deviation truly is negligible, but it could also
+mean the study simply lacked statistical power to detect it.</p>
+<p>Richter (2016) formalized this critique, showing that when samples
+are small or residual effects are modest, traditional NHST-based
+residual tests have dangerously low power. In practice, this means
+researchers routinely “confirm” their predicted patterns by failing to
+reject a null they were never powered to detect — a problem that grows
+worse with more conditions (and thus more residual contrasts).</p>
+<p>Faced with this issue, many researchers have essentially given up on
+testing residuals and instead only report the contrast of interest,
+treating residuals as a nuisance. This is understandable but
+unsatisfying: it means the analysis can tell you that the predicted
+trend <em>exists</em>, but it cannot tell you whether the predicted
+pattern <em>fully accounts</em> for the between-condition differences.
+An alternative pattern — one not predicted by your theory — could be
+driving much of the variance, and you would never know.</p>
+<p>This function offers a principled middle ground. Instead of relying
+on non-significance (which proves nothing), it uses <strong>equivalence
+testing</strong> (TOST; Lakens, 2017) to affirmatively demonstrate that
+residual deviations are <em>negligibly small</em> — smaller than a
+threshold you pre-specify. This shifts the burden of proof: rather than
+hoping the residuals “aren’t significant,” you now provide positive
+statistical evidence that they fall within bounds you consider trivial.
+Following Campbell (2024), the equivalence test is applied to
+standardized regression coefficients from the contrast model.</p>
+<p>The result is a framework that lets you both (1) establish that the
+predicted effect exists and (2) rule out meaningful alternative patterns
+— the full Contrast + Residual logic, done correctly.</p>
+</div>
+<div id="the-three-possible-conclusions" class="section level2">
+<h2>The Three Possible Conclusions</h2>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Conclusion</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><strong>SUPPORTED</strong></td>
+<td align="left">The predicted trend is significant AND all residual
+deviations are equivalent to zero.</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>PARTIALLY SUPPORTED</strong></td>
+<td align="left">The predicted trend is significant, BUT at least one
+residual is not equivalent to zero.</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>NOT SUPPORTED</strong></td>
+<td align="left">The predicted trend is not significant.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="key-references" class="section level2">
+<h2>Key References</h2>
+<ul>
+<li><strong>Campbell (2024)</strong> — equivalence testing for linear
+regression.</li>
+<li><strong>Richter (2016)</strong> — critique of NHST-based residual
+tests.</li>
+<li><strong>Berger (1982)</strong> — Intersection-Union Test (IUT).</li>
+<li><strong>Lakens (2017)</strong> — TOST equivalence testing.</li>
+</ul>
+</div>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(contrastanalysis)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># We use MASS for data generation in this tutorial</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code></pre></div>
+</div>
+<div id="your-first-analysis-between-subjects" class="section level1">
+<h1>Your First Analysis: Between-Subjects</h1>
+<div id="create-some-data" class="section level2">
+<h2>Create Some Data</h2>
+<p>Imagine an experiment with four conditions — A, B, C, D — where we
+predict a linear dose–response: the dependent variable increases equally
+from A to D.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># 60 participants per group, true means = 2, 4, 6, 8, SD = 3</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>n_per <span class="ot">&lt;-</span> <span class="dv">60</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>data_between <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">group =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>, <span class="st">&quot;D&quot;</span>), <span class="at">each =</span> n_per),</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">score =</span> <span class="fu">c</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_per, <span class="at">mean =</span> <span class="dv">2</span>, <span class="at">sd =</span> <span class="dv">3</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_per, <span class="at">mean =</span> <span class="dv">4</span>, <span class="at">sd =</span> <span class="dv">3</span>),</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_per, <span class="at">mean =</span> <span class="dv">6</span>, <span class="at">sd =</span> <span class="dv">3</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_per, <span class="at">mean =</span> <span class="dv">8</span>, <span class="at">sd =</span> <span class="dv">3</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  )</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="run-the-analysis" class="section level2">
+<h2>Run the Analysis</h2>
+<p>There are five arguments you always need to specify:</p>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Argument</th>
+<th align="left">What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>data</code></td>
+<td align="left">Your data frame.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>dv</code></td>
+<td align="left">The name of your dependent variable column (as a
+string).</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>conditions</code></td>
+<td align="left">The name of your grouping variable column (as a
+string).</td>
+</tr>
+<tr class="even">
+<td align="left"><code>hypothesis</code></td>
+<td align="left">A <strong>named numeric vector</strong> specifying your
+predicted pattern.</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>delta</code></td>
+<td align="left">The equivalence bound (how small is
+“negligible”?).</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>hypothesis</code> vector is the heart of the function. The
+<strong>names</strong> must match the levels of your grouping variable,
+and the <strong>values</strong> encode the predicted relative ordering.
+For a linear pattern across A, B, C, D:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">data       =</span> data_between,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">dv         =</span> <span class="st">&quot;score&quot;</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">conditions =</span> <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       240
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: A &lt; B &lt; C &lt; D
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.225, SE = 0.375, t(236) = 11.254, p &lt; .001 [SIGNIFICANT]
+##   d = 1.453, 95% CI [1.198, 1.707]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.300, +/-0.300
+## 
+##   Residual 1:
+##     NHST: b = -0.043, SE = 0.375, t(236) = -0.113, p = 0.910
+##     TOST: d = -0.015, 90% CI [-0.228, 0.199]
+##           p1 = 0.014, p2 = 0.008, p_TOST = 0.014 [EQUIVALENT (within bounds)]
+## 
+##   Residual 2:
+##     NHST: b = 0.426, SE = 0.375, t(236) = 1.134, p = 0.258
+##     TOST: d = 0.146, 90% CI [-0.067, 0.360]
+##           p1 &lt; .001, p2 = 0.118, p_TOST = 0.118 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.0%
+##   Residual 1:           0.0%
+##   Residual 2:           1.0%
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.30, t1(236) = 2.21, p1 = .014, t2(236) = -2.44, p2 = .008, p_TOST = .014 (equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.30, t1(236) = 3.46, p1 &lt; .001, t2(236) = -1.19, p2 = .118, p_TOST = .118 (not equivalent to zero).</code></pre>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+</div>
+<div id="reading-the-output" class="section level2">
+<h2>Reading the Output</h2>
+<p>The output is printed automatically. Let’s walk through each
+section.</p>
+<div id="contrast-of-interest-nhst" class="section level3">
+<h3>Contrast of Interest (NHST)</h3>
+<p>This tests whether the linear trend you predicted is statistically
+significant. You’ll see a regression coefficient (<code>b</code>), its
+standard error, a <em>t</em>-test, and a standardized effect size
+(<code>d = b / sigma</code>, where sigma is the square root of MSE).</p>
+<p>If this is significant, your predicted pattern is present in the
+data.</p>
+</div>
+<div id="residual-contrasts-tost-equivalence-tests" class="section level3">
+<h3>Residual Contrasts (TOST Equivalence Tests)</h3>
+<p>For <em>k</em> = 4 groups there are <em>k</em> − 1 = 3 total degrees
+of freedom among means. One is used by your contrast of interest,
+leaving <em>k</em> − 2 = 2 residual contrasts. These capture
+<em>everything your predicted pattern does not explain</em>.</p>
+<p>Each residual is tested with a <strong>Two One-Sided Tests
+(TOST)</strong> procedure. TOST asks: “Is this effect small enough to be
+considered equivalent to zero?” You’ll see:</p>
+<ul>
+<li>The standardized effect (<code>d</code>) and its <strong>90%
+CI</strong> (TOST-consistent).</li>
+<li>Two one-sided <em>p</em>-values (<code>p1</code>, <code>p2</code>)
+and their maximum (<code>p_TOST</code>).</li>
+<li>A verdict: <strong>EQUIVALENT</strong> or <strong>NOT
+equivalent</strong>.</li>
+</ul>
+<p>If p_TOST &lt; alpha, the residual is declared equivalent to
+zero.</p>
+</div>
+<div id="variance-decomposition" class="section level3">
+<h3>Variance Decomposition</h3>
+<p>This shows what percentage of the model (between-group) variance is
+captured by your predicted pattern versus the residuals. Ideally, the
+contrast of interest accounts for nearly all of it (e.g., 95%+).</p>
+</div>
+<div id="conclusion" class="section level3">
+<h3>Conclusion</h3>
+<p>The function combines the NHST and TOST results into one of three
+verdicts: SUPPORTED, PARTIALLY SUPPORTED, or NOT SUPPORTED (see Section
+1.1).</p>
+</div>
+</div>
+</div>
+<div id="the-hypothesis-argument-in-detail" class="section level1">
+<h1>The <code>hypothesis</code> Argument in Detail</h1>
+<p>The <code>hypothesis</code> argument is the heart of the function. It
+tells the function <em>what pattern you predict</em>. Let’s walk through
+exactly how this works.</p>
+<div id="what-the-values-mean" class="section level2">
+<h2>What the Values Mean</h2>
+<p>You supply a named numeric vector where:</p>
+<ul>
+<li>The <strong>names</strong> are your condition/group labels (must
+match the factor levels in your data).</li>
+<li>The <strong>values</strong> encode the predicted <em>relative</em>
+pattern of means.</li>
+</ul>
+<p>Only the <strong>relative spacing</strong> matters. The function
+centers the values (subtracts their mean) and normalizes them to unit
+length internally. So all of these specify the exact same linear
+contrast:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># These are all identical:</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="fl">0.5</span>, <span class="at">C =</span> <span class="dv">1</span>, <span class="at">D =</span> <span class="fl">1.5</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">10</span>, <span class="at">B =</span> <span class="dv">20</span>, <span class="at">C =</span> <span class="dv">30</span>, <span class="at">D =</span> <span class="dv">40</span>)</span></code></pre></div>
+<p>Think of the values as “predicted mean scores on an arbitrary scale.”
+If you predict that A has the lowest score, B is a little higher, C
+higher still, and D the highest — with equal steps between them — then
+<code>c(A = 0, B = 1, C = 2, D = 3)</code> encodes this perfectly.</p>
+</div>
+<div id="how-the-function-builds-the-contrasts" class="section level2">
+<h2>How the Function Builds the Contrasts</h2>
+<p>From your hypothesis values, the function automatically constructs a
+full set of <strong>orthogonal contrasts</strong> that partition the
+<em>k</em> − 1 degrees of freedom among group means:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Contrast of interest (1 df):</strong> Derived directly
+from your hypothesis. The centered and normalized values become the
+contrast weights. This tests: “Do the group means follow the predicted
+pattern?”</p></li>
+<li><p><strong>Residual contrasts (<em>k</em> − 2 df):</strong> The
+function uses <code>MASS::Null()</code> to compute an orthonormal basis
+for the subspace orthogonal to both the intercept and the contrast of
+interest. These residuals collectively capture <em>everything your
+predicted pattern does not explain</em>.</p></li>
+</ol>
+<p>The output displays the full contrast weights table so you can see
+exactly what is being tested.</p>
+</div>
+<div id="a-note-on-residual-contrasts" class="section level2">
+<h2>A Note on Residual Contrasts</h2>
+<p>An important subtlety: the individual residual contrast vectors are
+<strong>not uniquely defined</strong>. <code>MASS::Null()</code> returns
+one possible basis, but any rotation within the residual subspace would
+be equally valid. This means the label “Residual 1” vs. “Residual 2” is
+arbitrary — you should not over-interpret which specific comparison each
+residual corresponds to.</p>
+<p>What <em>is</em> invariant is their <strong>joint</strong> behavior:
+the set of residual contrasts as a whole captures all systematic
+deviations from your predicted pattern. If any such deviation exists, at
+least one residual will pick it up. This is why the function tests each
+residual and requires <em>all</em> of them to be equivalent to zero for
+a “SUPPORTED” conclusion.</p>
+</div>
+<div id="non-linear-spacing" class="section level2">
+<h2>Non-Linear Spacing</h2>
+<p>The values don’t have to be evenly spaced. You can encode any
+monotonic (or non-monotonic) pattern you predict:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Diminishing returns: big jump from A to B, smaller increments after</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">3</span>, <span class="at">C =</span> <span class="dv">4</span>, <span class="at">D =</span> <span class="fl">4.5</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co"># Dose-response matching actual doses (0, 1, 3, 5 mg)</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">Placebo =</span> <span class="dv">0</span>, <span class="at">Low =</span> <span class="dv">1</span>, <span class="at">Med =</span> <span class="dv">3</span>, <span class="at">High =</span> <span class="dv">5</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># Quadratic (inverted U): peak at B/C, lower at extremes</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">1</span>, <span class="at">D =</span> <span class="dv">0</span>)</span></code></pre></div>
+<p>The spacing directly determines the contrast weights, so
+<code>c(0, 1, 3, 5)</code> tests a different pattern than
+<code>c(0, 1, 2, 3)</code>. The first gives more weight to the jump from
+Low to Med (which spans 2 units) than from Placebo to Low (which spans 1
+unit).</p>
+</div>
+<div id="encoding-equality-constraints-ties" class="section level2">
+<h2>Encoding Equality Constraints (Ties)</h2>
+<p>You can predict that some conditions are <strong>equal</strong> by
+giving them the same value. For example, to test “[A = B] &lt; [C =
+D]”:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">99</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>data_tie <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">group =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>,<span class="st">&quot;B&quot;</span>,<span class="st">&quot;C&quot;</span>,<span class="st">&quot;D&quot;</span>), <span class="at">each =</span> <span class="dv">50</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">score =</span> <span class="fu">c</span>(<span class="fu">rnorm</span>(<span class="dv">50</span>, <span class="dv">3</span>, <span class="dv">2</span>), <span class="fu">rnorm</span>(<span class="dv">50</span>, <span class="dv">3</span>, <span class="dv">2</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>            <span class="fu">rnorm</span>(<span class="dv">50</span>, <span class="dv">7</span>, <span class="dv">2</span>), <span class="fu">rnorm</span>(<span class="dv">50</span>, <span class="dv">7</span>, <span class="dv">2</span>))</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>)</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>result_tie <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">data       =</span> data_tie,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">dv         =</span> <span class="st">&quot;score&quot;</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  <span class="at">conditions =</span> <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">0</span>, <span class="at">C =</span> <span class="dv">1</span>, <span class="at">D =</span> <span class="dv">1</span>),</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">FALSE</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       200
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: [A = B] &lt; [C = D]
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.033, SE = 0.279, t(196) = 14.457, p &lt; .001 [SIGNIFICANT]
+##   d = 2.045, 95% CI [1.766, 2.323]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.300, +/-0.300
+## 
+##   Residual 1:
+##     NHST: b = 0.268, SE = 0.279, t(196) = 0.963, p = 0.337
+##     TOST: d = 0.136, 90% CI [-0.098, 0.370]
+##           p1 = 0.001, p2 = 0.124, p_TOST = 0.124 [NOT equivalent]
+## 
+##   Residual 2:
+##     NHST: b = 0.325, SE = 0.279, t(196) = 1.165, p = 0.245
+##     TOST: d = 0.165, 90% CI [-0.069, 0.399]
+##           p1 &lt; .001, p2 = 0.170, p_TOST = 0.170 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 98.9%
+##   Residual 1:           0.4%
+##   Residual 2:           0.6%
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.03, SE = 0.28, t(196) = 14.46, p &lt; .001, d = 2.04, 95% CI [1.77, 2.32].
+## Residual contrast 1 (TOST): b = 0.27, SE = 0.28, d = 0.14, 90% CI [-0.10, 0.37], equivalence bounds = +/-0.30, t1(196) = 3.08, p1 = .001, t2(196) = -1.16, p2 = .124, p_TOST = .124 (not equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.33, SE = 0.28, d = 0.16, 90% CI [-0.07, 0.40], equivalence bounds = +/-0.30, t1(196) = 3.29, p1 &lt; .001, t2(196) = -0.96, p2 = .170, p_TOST = .170 (not equivalent to zero).</code></pre>
+<p>The output’s “Hypothesized pattern” line will display:
+<code>[A = B] &lt; [C = D]</code>.</p>
+</div>
+<div id="more-examples-of-hypothesis-encoding" class="section level2">
+<h2>More Examples of Hypothesis Encoding</h2>
+<p>Here are several common experimental designs and how to encode
+them:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># 1. Simple two-level comparison with a third reference group</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#    &quot;Treatment is better than both controls, which are equal&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">Control1 =</span> <span class="dv">0</span>, <span class="at">Control2 =</span> <span class="dv">0</span>, <span class="at">Treatment =</span> <span class="dv">1</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co"># 2. Helmert-style: &quot;Any intervention &gt; no intervention&quot;</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#    Three interventions vs. one control</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">Relevance =</span> <span class="dv">1</span>, <span class="at">PeerModel =</span> <span class="dv">1</span>, <span class="at">GrowthMindset =</span> <span class="dv">1</span>, <span class="at">Control =</span> <span class="dv">0</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co"># 3. Linear trend across five time points</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">T1 =</span> <span class="dv">1</span>, <span class="at">T2 =</span> <span class="dv">2</span>, <span class="at">T3 =</span> <span class="dv">3</span>, <span class="at">T4 =</span> <span class="dv">4</span>, <span class="at">T5 =</span> <span class="dv">5</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co"># 4. Step function: &quot;Nothing happens until the threshold, then it jumps&quot;</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">Dose0 =</span> <span class="dv">0</span>, <span class="at">Dose1 =</span> <span class="dv">0</span>, <span class="at">Dose2 =</span> <span class="dv">1</span>, <span class="at">Dose3 =</span> <span class="dv">1</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co"># 5. Three ordered groups with predicted unequal spacing</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#    &quot;Experts &gt;&gt; Intermediates &gt; Novices&quot;</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>hypothesis <span class="ot">=</span> <span class="fu">c</span>(<span class="at">Novice =</span> <span class="dv">0</span>, <span class="at">Intermediate =</span> <span class="dv">1</span>, <span class="at">Expert =</span> <span class="dv">3</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="within-subjects-designs" class="section level1">
+<h1>Within-Subjects Designs</h1>
+<p>The function also handles repeated-measures data. The key
+differences:</p>
+<ul>
+<li>Data must be in <strong>wide format</strong> (one row per
+participant, one column per condition).</li>
+<li>Set <code>design = &quot;within&quot;</code>.</li>
+<li>Set <code>dv = NULL</code> and <code>conditions = NULL</code>.</li>
+<li>Provide the participant ID column with <code>id</code>.</li>
+</ul>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">77</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">50</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>Sigma <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">9</span>, <span class="fl">4.5</span>, <span class="fl">4.5</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                  <span class="fl">4.5</span>, <span class="dv">9</span>, <span class="fl">4.5</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>                  <span class="fl">4.5</span>, <span class="fl">4.5</span>, <span class="dv">9</span>), <span class="at">nrow =</span> <span class="dv">3</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>scores <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">mvrnorm</span>(n, <span class="at">mu =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">8</span>, <span class="dv">8</span>), <span class="at">Sigma =</span> Sigma)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>data_within <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>  <span class="at">pid   =</span> <span class="dv">1</span><span class="sc">:</span>n,</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  <span class="at">Ctrl  =</span> scores[, <span class="dv">1</span>],</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  <span class="at">DrugA =</span> scores[, <span class="dv">2</span>],</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="at">DrugB =</span> scores[, <span class="dv">3</span>]</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>)</span></code></pre></div>
+<p>Here we predict that the control is lower than both drug conditions,
+which are equal to each other:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>result_within <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="at">data       =</span> data_within,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">dv         =</span> <span class="cn">NULL</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">conditions =</span> <span class="cn">NULL</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">Ctrl =</span> <span class="dv">0</span>, <span class="at">DrugA =</span> <span class="dv">1</span>, <span class="at">DrugB =</span> <span class="dv">1</span>),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">design     =</span> <span class="st">&quot;within&quot;</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="at">id         =</span> <span class="st">&quot;pid&quot;</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  within-subjects
+## Groups:  Ctrl, DrugA, DrugB (k = 3)
+## N:       50
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d_z = M / SD (M and SD of within-subject contrast scores)
+## 
+## Hypothesized pattern: Ctrl &lt; [DrugA = DrugB]
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 2.695, SE = 0.331, t(49) = 8.145, p &lt; .001 [SIGNIFICANT]
+##   d = 1.152, 95% CI [0.785, 1.518]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.300
+## 
+##   Residual 1:
+##     NHST: b = -0.092, SE = 0.324, t(49) = -0.284, p = 0.777
+##     TOST: d = -0.040, 90% CI [-0.277, 0.197]
+##           p1 = 0.036, p2 = 0.010, p_TOST = 0.036 [EQUIVALENT (within bounds)]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.9%
+##   Residual 1:           0.1%
+## 
+## =================================================================
+##   CONCLUSION: SUPPORTED
+## =================================================================
+##   The data fully support the hypothesized pattern. The contrast
+##   of interest is statistically significant, and all residual
+##   contrasts are equivalent to zero (within the specified
+##   equivalence bounds).
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 2.70, SE = 0.33, t(49) = 8.14, p &lt; .001, d = 1.15, 95% CI [0.79, 1.52].
+## Residual contrast 1 (TOST): b = -0.09, SE = 0.32, d = -0.04, 90% CI [-0.28, 0.20], equivalence bounds = +/-0.30, t1(49) = 1.84, p1 = .036, t2(49) = -2.41, p2 = .010, p_TOST = .036 (equivalent to zero).</code></pre>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>For within-subjects designs, the effect size is <strong>d_z</strong>
+(the mean of within-subject contrast scores divided by their standard
+deviation).</p>
+</div>
+<div id="understanding-delta-the-equivalence-bound" class="section level1">
+<h1>Understanding <code>delta</code>: The Equivalence Bound</h1>
+<p>The <code>delta</code> parameter is perhaps the most important
+decision you make. It defines “how small is small enough?” for the
+residual contrasts. If a residual’s standardized effect falls within
+±delta, it’s declared equivalent to zero.</p>
+<div id="what-does-delta-mean" class="section level2">
+<h2>What Does Delta Mean?</h2>
+<p>Delta is expressed in <strong>standardized units</strong> (Cohen’s
+<em>d</em> scale):</p>
+<ul>
+<li>Between-subjects: <em>d</em> = <em>b</em> / sigma, where sigma =
+sqrt(MSE).</li>
+<li>Within-subjects: <em>d_z</em> = <em>M</em> / <em>SD</em> of contrast
+scores.</li>
+</ul>
+<p>A delta of 0.3 means: “I consider a residual negligible if its
+standardized effect is smaller than 0.3 in absolute value.”</p>
+</div>
+<div id="how-to-choose-delta" class="section level2">
+<h2>How to Choose Delta</h2>
+<p>There is no single correct value. Your choice should be justified on
+substantive grounds. Some approaches:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Anchor to effect-size benchmarks.</strong> If your field
+considers <em>d</em> = 0.20 a “small” effect, you might set delta = 0.20
+(anything smaller than “small” is negligible).</li>
+<li><strong>Anchor to the smallest effect size of interest
+(SESOI).</strong> If your theory says an effect below <em>d</em> = 0.15
+is theoretically meaningless, set delta = 0.15.</li>
+<li><strong>Anchor to practical significance.</strong> What is the
+smallest deviation from your predicted pattern that would change your
+theoretical conclusions?</li>
+</ol>
+<p>Tighter bounds (smaller delta) are more conservative — they require
+stronger evidence that the residuals are truly small. But they also
+require larger sample sizes.</p>
+</div>
+<div id="specifying-different-deltas-for-each-residual" class="section level2">
+<h2>Specifying Different Deltas for Each Residual</h2>
+<p>For <em>k</em> groups there are <em>k</em> − 2 residual contrasts.
+You can set a single delta (applied to all) or a vector of deltas (one
+per residual):</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Same bound for all residuals</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>result_same <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">FALSE</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       240
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: A &lt; B &lt; C &lt; D
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.225, SE = 0.375, t(236) = 11.254, p &lt; .001 [SIGNIFICANT]
+##   d = 1.453, 95% CI [1.198, 1.707]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.300, +/-0.300
+## 
+##   Residual 1:
+##     NHST: b = -0.043, SE = 0.375, t(236) = -0.113, p = 0.910
+##     TOST: d = -0.015, 90% CI [-0.228, 0.199]
+##           p1 = 0.014, p2 = 0.008, p_TOST = 0.014 [EQUIVALENT (within bounds)]
+## 
+##   Residual 2:
+##     NHST: b = 0.426, SE = 0.375, t(236) = 1.134, p = 0.258
+##     TOST: d = 0.146, 90% CI [-0.067, 0.360]
+##           p1 &lt; .001, p2 = 0.118, p_TOST = 0.118 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.0%
+##   Residual 1:           0.0%
+##   Residual 2:           1.0%
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.30, t1(236) = 2.21, p1 = .014, t2(236) = -2.44, p2 = .008, p_TOST = .014 (equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.30, t1(236) = 3.46, p1 &lt; .001, t2(236) = -1.19, p2 = .118, p_TOST = .118 (not equivalent to zero).</code></pre>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Different bounds: stricter for Residual 1, more lenient for Residual 2</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>result_diff <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fu">c</span>(<span class="fl">0.15</span>, <span class="fl">0.40</span>),</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">FALSE</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       240
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: A &lt; B &lt; C &lt; D
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.225, SE = 0.375, t(236) = 11.254, p &lt; .001 [SIGNIFICANT]
+##   d = 1.453, 95% CI [1.198, 1.707]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.150, +/-0.400
+## 
+##   Residual 1:
+##     NHST: b = -0.043, SE = 0.375, t(236) = -0.113, p = 0.910
+##     TOST: d = -0.015, 90% CI [-0.228, 0.199]
+##           p1 = 0.148, p2 = 0.102, p_TOST = 0.148 [NOT equivalent]
+## 
+##   Residual 2:
+##     NHST: b = 0.426, SE = 0.375, t(236) = 1.134, p = 0.258
+##     TOST: d = 0.146, 90% CI [-0.067, 0.360]
+##           p1 &lt; .001, p2 = 0.025, p_TOST = 0.025 [EQUIVALENT (within bounds)]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.0%
+##   Residual 1:           0.0%
+##   Residual 2:           1.0%
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.15, t1(236) = 1.05, p1 = .148, t2(236) = -1.28, p2 = .102, p_TOST = .148 (not equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.40, t1(236) = 4.23, p1 &lt; .001, t2(236) = -1.96, p2 = .025, p_TOST = .025 (equivalent to zero).</code></pre>
+</div>
+</div>
+<div id="equivalence-bounds-from-of-model-variance-delta_type-share_signal" class="section level1">
+<h1>Equivalence Bounds from % of Model Variance
+(<code>delta_type = &quot;share_signal&quot;</code>)</h1>
+<p>Sometimes it’s more natural to think about equivalence in relative
+terms: “I want each residual to account for no more than X% of the model
+variance.” The <code>share_signal</code> feature lets you specify bounds
+this way.</p>
+<div id="the-idea" class="section level2">
+<h2>The Idea</h2>
+<p>Your predicted pattern and the residuals together make up 100% of the
+model (between-group) variance. If your pattern is a good approximation,
+the residuals should account for only a tiny fraction of this total.
+Setting <code>delta_type = &quot;share_signal&quot;</code> lets you define
+“negligible” as a maximum tolerable percentage.</p>
+</div>
+<div id="how-it-works" class="section level2">
+<h2>How It Works</h2>
+<p>The function converts your percentage into a <em>d</em>-scale bound
+using the formula:</p>
+<p><span class="math display">\[
+\delta_d = d_{\text{interest, min}} \times \sqrt{\frac{p}{1 - p}}
+\]</span></p>
+<p>where <em>p</em> is your maximum tolerable share (e.g., 0.05 for 5%)
+and <em>d</em>~interest, min~ is a reference effect size you supply for
+the contrast of interest. After this conversion, the existing TOST
+machinery runs on the converted <em>d</em> bound — nothing else
+changes.</p>
+</div>
+<div id="the-two-required-inputs" class="section level2">
+<h2>The Two Required Inputs</h2>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Argument</th>
+<th align="left">What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>delta</code></td>
+<td align="left">The maximum tolerable % of model variance per residual
+(between 0 and 100).</td>
+</tr>
+<tr class="even">
+<td align="left"><code>d_interest_min</code></td>
+<td align="left">Your pre-specified SESOI for the contrast of interest,
+in standardized <em>d</em> units.</td>
+</tr>
+</tbody>
+</table>
+<p>You need <code>d_interest_min</code> because “5% of model variance”
+only translates into a concrete <em>d</em> bound if you know (or
+specify) how large the main effect is. This keeps the equivalence bounds
+<strong>fixed and pre-specified</strong>, which is essential for valid
+frequentist inference.</p>
+</div>
+<div id="example" class="section level2">
+<h2>Example</h2>
+<p>Suppose you predict a linear dose–response, and you want each
+residual to account for no more than 5% of the model variance, assuming
+the contrast of interest is at least <em>d</em> = 0.80 (your SESOI for
+the main trend):</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>result_share <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">data       =</span> data_between,</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">dv         =</span> <span class="st">&quot;score&quot;</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">conditions =</span> <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="dv">5</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>  <span class="at">delta_type =</span> <span class="st">&quot;share_signal&quot;</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>  <span class="at">d_interest_min =</span> <span class="fl">0.80</span>,</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>  <span class="at">graph2     =</span> <span class="cn">TRUE</span></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       240
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: A &lt; B &lt; C &lt; D
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.225, SE = 0.375, t(236) = 11.254, p &lt; .001 [SIGNIFICANT]
+##   d = 1.453, 95% CI [1.198, 1.707]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Delta type: share_signal (% of model variance)
+##   Reference d_interest_min: 0.8
+##   Equivalence bounds (converted to d-scale):
+##     Residual 1: max share = 5.0% =&gt; d bound = +/-0.1835
+##     Residual 2: max share = 5.0% =&gt; d bound = +/-0.1835
+## 
+##   Residual 1:
+##     NHST: b = -0.043, SE = 0.375, t(236) = -0.113, p = 0.910
+##     TOST: d = -0.015, 90% CI [-0.228, 0.199]
+##           p1 = 0.096, p2 = 0.063, p_TOST = 0.096 [NOT equivalent]
+## 
+##   Residual 2:
+##     NHST: b = 0.426, SE = 0.375, t(236) = 1.134, p = 0.258
+##     TOST: d = 0.146, 90% CI [-0.067, 0.360]
+##           p1 = 0.006, p2 = 0.387, p_TOST = 0.387 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.0%
+##   Residual 1:           0.0%
+##   Residual 2:           1.0%
+## 
+## ----- Share-Based Equivalence Interpretation -----
+##   Equivalence bounds were derived from a maximum tolerable share of
+##   model variance, assuming the contrast of interest is at least
+##   d_interest_min = 0.8 in standardized units.
+##   Formula: delta_d = d_interest_min * sqrt(p / (1 - p)),
+##   where p = max_share / 100.
+##   This interpretation holds when the observed interest effect is at
+##   least d_interest_min; the conclusion logic already enforces this
+##   implicitly (interest must be significant for SUPPORTED).
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.184 (from 5.0% share, d_int_min = 0.80), t1(236) = 1.31, p1 = .096, t2(236) = -1.53, p2 = .063, p_TOST = .096 (not equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.184 (from 5.0% share, d_int_min = 0.80), t1(236) = 2.56, p1 = .006, t2(236) = -0.29, p2 = .387, p_TOST = .387 (not equivalent to zero).</code></pre>
+<p><img role="img" aria-label src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAAEgCAMAAAAjXV6yAAABm1BMVEUAAAAAADoAAGYAOpAAZrYui1c6AAA6ADo6kNtGgrRNTU1NTW5NTY5Nbm5Nbo5NbqtNjshmAABmADpmZmZmZoFmZp1mgYFmgZ1mgbZmnZ1mnc9mtrZmtv9uTU1uTW5uTY5ubk1ubm5ubo5ubqtujo5ujqtuq+SBZmaBZoGBZp2BgWaBgZ2BgbaBnZ2Bnc+BtueOTU2OTW6OTY6Obk2Obo6Ojo6Oq8iOq+SOyKuOyOSOyP+QOgCQkGaQ2/+dZmadZoGdZp2dgWadgYGdgZ2dgbadnWadnYGdz/+rbk2rbm6rjm6rjo6ryOSr5P+2ZgC2gWa2gYG2nWa225C25/+2///Ijk3Ijm7Iq27Iq47I5KvI5P/I/+TI///NXFzPnWbPnYHPtoHP57bP///bkDrb///c4ejkq27kq47kyI7kyKvkyMjk5P/k/8jk/+Tk///ntoHnz53n57bn58/n5//n/8/n///r6+vr8Pf/tmb/yI7/yKv/z53/25D/5Kv/5Mj/5OT/57b/5+f//7b//8j//8///9v//+T//+f///9idu69AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAL+ElEQVR4nO2di3sUVxmHt0owbCKXLlhciVK10CoaKtoKlNjaamILQY1Bi9moiaZUayJqNGkIRgLL/Nme7zuXOXPbXx6SyMz29z6QzJzb7Hn3nO/M4elMWwkZSOt5f4C6Q0EACgJQEICCABQEoCAABQEoCEBBAAoCUBCgGYKO/dvzJ39wLFfkX5WVnyUnhYIATRPUoaAyKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCMEgDKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCMEgDKAhAQQAKAtQoSPd/M9FuH7+5h5qAh1fa7Wvm9+7l8YV9N3YIgkZGRp5FUH+mrVwrK/ufO6XJ5Vnz7TJBA5oYVOjgBY0IzyBovn38bvJwpl32rRt5Vb0ryZp3KRlBA5oY2NiBCxqxwM+SF7R7eeyW/Pq+zLGPJtpjb6xKDz+80j5+SwfXiU8uj/1gYvzup+fNRDRF78mEvGuzVrUJWytNEUHZJlZlGo9d1atJW/60pLGioH0F6ZFq9ihoeyL9ZPM6106abujBib86Qebn+IcTkjS+sG1//zbtk6uVFxQ3sWrLXLAtjy/402Jj9RO0mX6y7Ymxm/KZr5luXDAZ4ws69PXMFjCjzZcPsyLUykyxbBPbEzKNfXJ6WmishoKiEbRpBo8MiAs67aSbTpBOwv7HH5h5cWvXLFVffOMvaZ9CrZyguIlNuw6Y2tpWeppv7MAFpRxADIoEmSibE2S+9ZufaPT9+P3zpm9QUNyEMyJjMxIkxXONlQmqzyrmJot8z6532mfbqRXj4Z5b6rQ/89kpZsqUCtLUbROYXZaV7U4LjaXU5z5IhrlwNQ7Sae90FVNBdlZsut+aFQfppFJQCNInVt149afFxg5TUDLyjHfSd8xa8nVZ5XX1tcu8692nE15Q/0577M0Vo+CeW+4ly0ZYV6tCkJbTa7yyGuKZOy02dqiCBuZUC6on3KwCKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCMEgDKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCMEgDKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCMEgDKAhAQQAKAjBIAygIQEEACgIwSAMoCEBBAAoCeEG9XsODtHtAfuzN0jz3CobSt3lEibuXT+Zzj3k/vd5QCGr7Z+uzeXsT1J9vVwjq9SJDTRWkT6Gu5J85zRUaJOjhTLtCUK8XG2q0oO0J09vcKzmsgv777bEfZh/ztU/yekH9mfbLeUG9UnKXbpQgHUG5V3IsuBcLpCcqJc6VFvof3NwcakHhNQqFV3JYHUbgR7EgyZG3gETz7jMg6JW7Ja/k2FVZJ/NP0vu3gAwQNGRBuv/rdukrOcoF+beA7EXQUCzz9sUVprOFV3KEKbaiU6x9VQ/8W0D2JGgYbhT1xRUzaZBOX8mRCdLhYCXKdY0MENT4f+4Iy7xZvfKv5Mgs88n2FXvg3wLyGRF0WHCzCqAgAAUBKAjAIA2gIAAFASgIwCANoCAABQEoCMAgDaAgAAUBKAjAIA2gIAAFASgIwCANoCAABQEoCMAgDaAgAAUBKAjAIA2gIAAFASgIwCANoCAABQEoCMAgDaAgAAUBKAjAIA2gIAAFASgIwCANoCAABQEKgnoNFXQAr6bo39Gn7LPkg3Sv12u0oP28mmLePqqZzc0JavJj4ft9NYU+Nz3j/lfsgayg0gfnGyVoH6+m2L6izwOXChr4goFGCdrHqymiViKGSNABvJqi5P04wyZoX6+mMH4KESy7zDc8Bu331RTzhTWscB/U9FVsX6+mWCnxM0z3Qft9NYWbpAOX+QZvNfb/aorN9lALOiwoCMDdPICCABQEoCAAgzSAggAUBKAgAIM0gIIAFASgIACDNICCABQEoCAAgzSAggAUBKAgAIM0gIIAFASgIACDNICCABQEoKD6QkEACgJQEICCABQEoCAABQEoCNAUQf2Z8B+YR4fZM3kwJvMUw/bXSqvEOYU6eZoiaP6k/MkfZs82c8/ARI83ZKrEOfk6BRoiaPf1W/5bjw5zZ/PZ5xxX2t90GdkqcU6+TpGGCJLuSTezh9mz/s+yT5n9edVLyVaJc/J1igyRoN3Xz7ezT+JVCUpzinXyDJGg7a/eSna/t5CrVaySySnUyTNEgoQKDZWCinXyNETQnoJ0UiUoH6SHUNBelvlNecrqG6X3QfllPuQU6+RpiqDdy3qrJ6uyOyxmrOTfSKAailXinEKdPE0R9NygIAAFASgIQEEACgJQEICCAHUR9OhUq9X63K/M0ca5qjIbL9yoSH50qqqSrzPbsnz+j8lyqzUqf4tlfSNPrp8LtWsiaKMlH2nW9Ka6rwMEDWjYCzJmLI9OjerfAumVl4+ktWsiaFY/0pPrR/4fgs6VXyQkprm1ESRmLA+O6jSQGXFOPupXTumBzIsX3pLO+pwX35IZ6ZKlS8s6hUa1qJ0/oU4SCZILtOx0jgu2jrgrGzZ0qrva9RBkppg3pF+fDKhlnW/mhxzMms+80ZKDkCOd8cn+O591xR8cHU0zbU5xBIWCtr3RMHB0OPvaNRGkX6x+cfr5X7whKedsrDAHcqzdL+S4ZNs36a4NL2YQhExt3wfp0SAoFPQByQvKNl0XQYnMs1YUpDdkJumJ+WEHvYsnaU5ItpWeXDfDxBYy/cvUKRlBoaB1EQuKm66RoETHtR39Zjj98mgqaDl0NpOznBUkU0X0KVEdbbkoyBd88IUbIUNQYcv1EuS/RNdXPX1wtGQEZXOyI0jjSbqm7W0ERRev8wjyq9iGHUH66TaiKWb7YEZINicky5lOsGiNDpl6VhQUreqjISOch9r1EGT6LB3YaNkga4eIC6j6Q/opa0o2JyT7IolLC8sZWsVCQfMVhbtHXcV87ZoIslsN7cyscSX3IDf86uSjkt7TZHKS6D7IhHgbUvSuJr6T0fb9KmZrOr1RQbnNmK3xfVCtyNxnU1AJYS+WUFApYTefUBCEggAUBKAgAAUBKAhAQQAKAlAQoO6Cnt7udKYzKY/fW88XyiSZGqbCzqX1qtL5Oot6BfPzzJKp202StW507ZoLenp7Mnn8o7k4yXe9KimbX1I6l7F1dv3pz+fMHznumt+P316Krl1zQdqNv/8jWet0JpOd70x1uuZrPXv/2++cWTJJXf2SJyVJequFHk+ZkSAV7/vS61tSckfqbGXq/FNNrE3KX+tLBS1OxteuuaAtO9p3Xlsy40h+vr1kPvfOq3Py8c2JybdJoZAbGkZQKG0SFqddHXMU10nsCLo9ufWli9ZdN83QazdDkPwyfbwkk8F1Odm52Dk9tyPdSvzXL4VSQb60GTZmyEiyO4rqCIud0z+dTP67nqxpsFucXrQDshGCXDdKBG2d0fEinqaBoK5vyemO6jgWVY1MNltRz22JmgvSQDk16aZYRlA32To9JwvO4mT5FAulX517eluF2KO4TqJeTU1xJyPIVlFB9to1FyQxtzOp8VfHhiwyU2dN3yXjy1PTsjqfXTdJLkiHBd4LkiwbpCVZj0IdG6TTZV4GkA5DO8Xstesu6LlDQQAKAtRckCzMpwfcSFfeKINME6srT7PV6i6oOzj/MARlaYYgs678ItwG/V73BsmaW5vsGiX7Cr3BMfsMu1YlsrvQvaduU2xlW2yt89I707rj0Nb1NAkbkj/4K2hK3QV1ZEk2u4Gdi0FQuMHRDcN9u5HQfYXcBq117YYiEV3TcgMU30PZ7cdrSybL7jgSvX+yrYcNSbiCSam7IB0K0t3oRvp3czvf9VuNS3/zGwnXpcRtKBLtuRkIubtw81PumE3KRTvOEnuabkj8FWxKswTZobDVNQl2q2EE+Y1EKsjHrZygMI6sEbvjSIKgsCEJV2jCXsx+yC258ZW5YmaA9PTdd5fcVsNMB7+RkNtmM8W2ztqUJDfFfGU30abcjiOxW5Sp6WhD4q5gU+ouSIa5bCjO/ER+vvRjGxm6idtqhCCtPa8M0rqVsJWl2Frn9LfcLkXK2dOwIfFXaESQTlmsXIgPFwoCNEbQ84KCABQEoCAABQEoCEBBAAoCUBCAggAUBKAgAAUB/geGa6U5PCmOkgAAAABJRU5ErkJggg==" alt style="display: block; margin: auto;" /><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>Notice the additional sections in the output:</p>
+<ul>
+<li><strong>Equivalence bounds (converted to d-scale):</strong> Shows
+the % you specified and the corresponding <em>d</em> bound.</li>
+<li><strong>Share-Based Equivalence Interpretation:</strong> Documents
+the conversion formula and its assumptions.</li>
+</ul>
+</div>
+<div id="some-intuition-for-the-conversion" class="section level2">
+<h2>Some Intuition for the Conversion</h2>
+<p>Here’s how different share thresholds translate to <em>d</em> bounds
+when <em>d</em>~interest, min~ = 1.0:</p>
+<table>
+<caption>Conversion from share to d bound (d_interest_min =
+1.0)</caption>
+<thead>
+<tr class="header">
+<th align="center">Max Share (%)</th>
+<th align="center">Converted d Bound</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">1</td>
+<td align="center">0.1005</td>
+</tr>
+<tr class="even">
+<td align="center">2</td>
+<td align="center">0.1429</td>
+</tr>
+<tr class="odd">
+<td align="center">5</td>
+<td align="center">0.2294</td>
+</tr>
+<tr class="even">
+<td align="center">10</td>
+<td align="center">0.3333</td>
+</tr>
+<tr class="odd">
+<td align="center">20</td>
+<td align="center">0.5000</td>
+</tr>
+<tr class="even">
+<td align="center">50</td>
+<td align="center">1.0000</td>
+</tr>
+</tbody>
+</table>
+<p>Key observations:</p>
+<ul>
+<li>A 5% share corresponds to <em>d</em> ≈ 0.23 — quite stringent.</li>
+<li>A 50% share corresponds to <em>d</em> = 1.0 — very lenient
+(residuals as large as the interest effect would still pass).</li>
+<li>Smaller <code>d_interest_min</code> values produce proportionally
+tighter bounds.</li>
+</ul>
+</div>
+<div id="when-to-use-share_signal-vs.-dz" class="section level2">
+<h2>When to Use <code>share_signal</code> vs. <code>dz</code></h2>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Use <code>dz</code> (the default) when…</th>
+<th align="left">Use <code>share_signal</code> when…</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">You have a substantive SESOI in <em>d</em> units for
+the residuals.</td>
+<td align="left">You think in terms of “% of variance explained.”</td>
+</tr>
+<tr class="even">
+<td align="left">Your field has established benchmarks for “negligible”
+effects.</td>
+<td align="left">You have a clear SESOI for the main effect but not for
+residuals.</td>
+</tr>
+<tr class="odd">
+<td align="left">You want the simplest, most transparent
+specification.</td>
+<td align="left">You want bounds that are interpretable relative to the
+main signal.</td>
+</tr>
+</tbody>
+</table>
+<p>Both modes run the same underlying TOST. The only difference is how
+you <em>specify</em> the bound.</p>
+</div>
+</div>
+<div id="graphs" class="section level1">
+<h1>Graphs</h1>
+<p>The function produces two types of plots, both controlled by
+arguments.</p>
+<div id="forest-plot-graph1" class="section level2">
+<h2>Forest Plot (<code>graph1</code>)</h2>
+<p>The forest plot displays point estimates and confidence intervals for
+the contrast of interest and all residual contrasts on a single
+<em>d</em> axis:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>p_forest <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">graph1.only =</span> <span class="cn">TRUE</span></span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>)</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>p_forest</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<div id="how-to-read-it" class="section level3">
+<h3>How to Read It</h3>
+<ul>
+<li><strong>Contrast of interest</strong> (top row): The 95% CI for
+<em>d</em>. Colored <strong>green</strong> if the CI excludes zero
+(significant), <strong>red</strong> if it includes zero (not
+significant).</li>
+<li><strong>Residual contrasts</strong> (lower rows): The 90% CI for
+<em>d</em> (TOST-consistent). Colored <strong>green</strong> if the
+entire CI falls within the equivalence bounds (the shaded blue region),
+<strong>red</strong> if any part of the CI extends beyond the
+bounds.</li>
+<li><strong>Shaded region</strong>: The equivalence bounds (±delta). If
+you specified different deltas per residual, the shaded region spans the
+largest delta, and each residual is colored against its own individual
+bound.</li>
+<li><strong>Dashed vertical line</strong>: Zero.</li>
+</ul>
+</div>
+<div id="when-to-use-graph1.only" class="section level3">
+<h3>When to Use <code>graph1.only</code></h3>
+<p>If you just want the ggplot object (e.g., to customize or save it),
+use <code>graph1.only = TRUE</code>. This returns the plot without
+printing the full text output:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(..., <span class="at">graph1.only =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">&quot;my_forest_plot.png&quot;</span>, p, <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">4</span>, <span class="at">dpi =</span> <span class="dv">300</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="variance-decomposition-plot-graph2" class="section level2">
+<h2>Variance Decomposition Plot (<code>graph2</code>)</h2>
+<p>This bar chart shows what percentage of the model variance is
+accounted for by each contrast:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>p_var <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>  <span class="at">graph2.only =</span> <span class="cn">TRUE</span></span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>)</span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>p_var</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p>The contrast of interest bar is filled (dark grey); residual bars are
+outlined with dashed lines. In a well-fitting model, the contrast of
+interest should dominate (95%+).</p>
+</div>
+<div id="showing-both-plots-together" class="section level2">
+<h2>Showing Both Plots Together</h2>
+<p>Set <code>graph1 = TRUE</code> and <code>graph2 = TRUE</code> to
+print both alongside the full text output:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>  <span class="at">graph2     =</span> <span class="cn">TRUE</span></span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+</div>
+<div id="working-with-the-return-object" class="section level1">
+<h1>Working with the Return Object</h1>
+<p>The function prints its output automatically, but it also
+<strong>invisibly returns</strong> a list containing all computed
+values. You can capture this for further use:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">FALSE</span></span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  A, B, C, D (k = 4)
+## N:       240
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: A &lt; B &lt; C &lt; D
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 4.225, SE = 0.375, t(236) = 11.254, p &lt; .001 [SIGNIFICANT]
+##   d = 1.453, 95% CI [1.198, 1.707]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Equivalence bounds (standardized): +/-0.300, +/-0.300
+## 
+##   Residual 1:
+##     NHST: b = -0.043, SE = 0.375, t(236) = -0.113, p = 0.910
+##     TOST: d = -0.015, 90% CI [-0.228, 0.199]
+##           p1 = 0.014, p2 = 0.008, p_TOST = 0.014 [EQUIVALENT (within bounds)]
+## 
+##   Residual 2:
+##     NHST: b = 0.426, SE = 0.375, t(236) = 1.134, p = 0.258
+##     TOST: d = 0.146, 90% CI [-0.067, 0.360]
+##           p1 &lt; .001, p2 = 0.118, p_TOST = 0.118 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 99.0%
+##   Residual 1:           0.0%
+##   Residual 2:           1.0%
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.30, t1(236) = 2.21, p1 = .014, t2(236) = -2.44, p2 = .008, p_TOST = .014 (equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.30, t1(236) = 3.46, p1 &lt; .001, t2(236) = -1.19, p2 = .118, p_TOST = .118 (not equivalent to zero).</code></pre>
+<p>Here are some useful things you can extract:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># The qualitative conclusion</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>result<span class="sc">$</span>conclusion</span></code></pre></div>
+<pre><code>## [1] &quot;PARTIALLY SUPPORTED&quot;</code></pre>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="co"># The contrast of interest effect size and p-value</span></span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>result<span class="sc">$</span>interest<span class="sc">$</span>d</span></code></pre></div>
+<pre><code>## [1] 1.45283</code></pre>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>result<span class="sc">$</span>interest<span class="sc">$</span>p</span></code></pre></div>
+<pre><code>## [1] 8.417937e-24</code></pre>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="co"># Residual 1&#39;s TOST p-value</span></span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>result<span class="sc">$</span>residuals[[<span class="dv">1</span>]]<span class="sc">$</span>p_tost</span></code></pre></div>
+<pre><code>## [1] 0.01401752</code></pre>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="co"># Whether each residual was declared equivalent</span></span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a>result<span class="sc">$</span>residuals_equiv</span></code></pre></div>
+<pre><code>## [1]  TRUE FALSE</code></pre>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="co"># Variance decomposition percentages</span></span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>result<span class="sc">$</span>variance<span class="sc">$</span>pct_interest</span></code></pre></div>
+<pre><code>## [1] 98.98481</code></pre>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" tabindex="-1"></a>result<span class="sc">$</span>variance<span class="sc">$</span>pct_residuals</span></code></pre></div>
+<pre><code>## [1] 0.01004323 1.00514652</code></pre>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" tabindex="-1"></a><span class="co"># The APA-formatted text (copy-paste ready)</span></span>
+<span id="cb39-2"><a href="#cb39-2" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>apa)</span></code></pre></div>
+<pre><code>## Contrast of interest: b = 4.23, SE = 0.38, t(236) = 11.25, p &lt; .001, d = 1.45, 95% CI [1.20, 1.71].
+## Residual contrast 1 (TOST): b = -0.04, SE = 0.38, d = -0.01, 90% CI [-0.23, 0.20], equivalence bounds = +/-0.30, t1(236) = 2.21, p1 = .014, t2(236) = -2.44, p2 = .008, p_TOST = .014 (equivalent to zero).
+## Residual contrast 2 (TOST): b = 0.43, SE = 0.38, d = 0.15, 90% CI [-0.07, 0.36], equivalence bounds = +/-0.30, t1(236) = 3.46, p1 &lt; .001, t2(236) = -1.19, p2 = .118, p_TOST = .118 (not equivalent to zero).</code></pre>
+<p>The full list of returned elements is documented in the table
+below:</p>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="81%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Element</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">interest</td>
+<td align="left">List with b, se, t, df, p, d, se_d, ci_b, ci_d for the
+contrast of interest.</td>
+</tr>
+<tr class="even">
+<td align="left">residuals</td>
+<td align="left">List of lists, one per residual, each with NHST + TOST
+results.</td>
+</tr>
+<tr class="odd">
+<td align="left">model</td>
+<td align="left">The fitted lm object (between-subjects) or NULL
+(within-subjects).</td>
+</tr>
+<tr class="even">
+<td align="left">design</td>
+<td align="left">‘between’ or ‘within’.</td>
+</tr>
+<tr class="odd">
+<td align="left">hypothesis</td>
+<td align="left">The hypothesis vector you supplied.</td>
+</tr>
+<tr class="even">
+<td align="left">hyp_levels</td>
+<td align="left">Character vector of condition names (in hypothesis
+order).</td>
+</tr>
+<tr class="odd">
+<td align="left">w_interest</td>
+<td align="left">Normalized contrast weights for the interest
+contrast.</td>
+</tr>
+<tr class="even">
+<td align="left">residual_basis</td>
+<td align="left">Matrix of residual contrast weights (k x (k-2)).</td>
+</tr>
+<tr class="odd">
+<td align="left">n_residuals</td>
+<td align="left">Number of residual contrasts (k - 2).</td>
+</tr>
+<tr class="even">
+<td align="left">delta_vec</td>
+<td align="left">Numeric vector of equivalence bounds in d units (after
+conversion if share_signal).</td>
+</tr>
+<tr class="odd">
+<td align="left">delta_type</td>
+<td align="left">‘dz’ or ‘share_signal’.</td>
+</tr>
+<tr class="even">
+<td align="left">delta_share_pct</td>
+<td align="left">The share percentages you specified (NA if delta_type =
+‘dz’).</td>
+</tr>
+<tr class="odd">
+<td align="left">d_interest_min</td>
+<td align="left">The reference d for the interest contrast (NA if
+delta_type = ‘dz’).</td>
+</tr>
+<tr class="even">
+<td align="left">alpha</td>
+<td align="left">The alpha level used.</td>
+</tr>
+<tr class="odd">
+<td align="left">alpha_tost</td>
+<td align="left">The alpha level used for TOST (may differ if Bonferroni
+applied).</td>
+</tr>
+<tr class="even">
+<td align="left">is_orthogonal</td>
+<td align="left">TRUE if all contrasts are orthogonal.</td>
+</tr>
+<tr class="odd">
+<td align="left">bonferroni_applied</td>
+<td align="left">TRUE if Bonferroni correction was applied to TOST
+alpha.</td>
+</tr>
+<tr class="even">
+<td align="left">contrast_matrix</td>
+<td align="left">Full contrast matrix (interest + residuals).</td>
+</tr>
+<tr class="odd">
+<td align="left">k</td>
+<td align="left">Number of groups/conditions.</td>
+</tr>
+<tr class="even">
+<td align="left">conclusion</td>
+<td align="left">‘SUPPORTED’, ‘PARTIALLY SUPPORTED’, or ‘NOT
+SUPPORTED’.</td>
+</tr>
+<tr class="odd">
+<td align="left">conclusion_text</td>
+<td align="left">A plain-English sentence summarizing the
+conclusion.</td>
+</tr>
+<tr class="even">
+<td align="left">residuals_equiv</td>
+<td align="left">Logical vector: TRUE for each residual declared
+equivalent.</td>
+</tr>
+<tr class="odd">
+<td align="left">apa</td>
+<td align="left">APA-formatted results string.</td>
+</tr>
+<tr class="even">
+<td align="left">variance</td>
+<td align="left">List with ss_interest, ss_residuals, ss_model,
+pct_interest, pct_residuals.</td>
+</tr>
+<tr class="odd">
+<td align="left">plot_forest</td>
+<td align="left">ggplot object for the forest plot (NULL if graph1 =
+FALSE).</td>
+</tr>
+<tr class="even">
+<td align="left">plot_variance</td>
+<td align="left">ggplot object for the variance plot (NULL if graph2 =
+FALSE).</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="confirming-your-setup-before-running-confirm-true" class="section level1">
+<h1>Confirming Your Setup Before Running
+(<code>confirm = TRUE</code>)</h1>
+<p>If you want to verify that the function has interpreted your
+hypothesis correctly before it runs the analysis, use
+<code>confirm = TRUE</code>:</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a>  data_between, <span class="st">&quot;score&quot;</span>, <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb41-3"><a href="#cb41-3" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="dv">1</span>, <span class="at">C =</span> <span class="dv">2</span>, <span class="at">D =</span> <span class="dv">3</span>),</span>
+<span id="cb41-4"><a href="#cb41-4" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="fl">0.3</span>,</span>
+<span id="cb41-5"><a href="#cb41-5" tabindex="-1"></a>  <span class="at">confirm    =</span> <span class="cn">TRUE</span></span>
+<span id="cb41-6"><a href="#cb41-6" tabindex="-1"></a>)</span></code></pre></div>
+<p>This will print:</p>
+<ul>
+<li>The hypothesized pattern in plain language (e.g.,
+<code>A &lt; B &lt; C &lt; D</code>).</li>
+<li>The normalized contrast weights.</li>
+<li>All residual contrast weights.</li>
+<li>The orthogonality status.</li>
+<li>The equivalence bounds.</li>
+</ul>
+<p>It then pauses and waits for you to press Enter to continue (or Esc
+to abort). This is especially helpful when you’re learning the function
+or when your hypothesis has equality constraints.</p>
+</div>
+<div id="putting-it-all-together-a-complete-worked-example" class="section level1">
+<h1>Putting It All Together: A Complete Worked Example</h1>
+<p>Let’s walk through a realistic scenario from start to finish.</p>
+<p><strong>Research question:</strong> We exposed participants to 0, 1,
+3, or 5 hours of violent video game play and measured subsequent
+aggression. We predict a linear dose–response relationship. We consider
+residual deviations negligible if they account for less than 5% of the
+model variance, and our SESOI for the main linear trend is <em>d</em> =
+0.50.</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb42-2"><a href="#cb42-2" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" tabindex="-1"></a><span class="co"># Simulate data</span></span>
+<span id="cb42-4"><a href="#cb42-4" tabindex="-1"></a>aggression_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb42-5"><a href="#cb42-5" tabindex="-1"></a>  <span class="at">hours =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;0hr&quot;</span>, <span class="st">&quot;1hr&quot;</span>, <span class="st">&quot;3hr&quot;</span>, <span class="st">&quot;5hr&quot;</span>), <span class="at">each =</span> <span class="dv">75</span>),</span>
+<span id="cb42-6"><a href="#cb42-6" tabindex="-1"></a>  <span class="at">aggression =</span> <span class="fu">c</span>(</span>
+<span id="cb42-7"><a href="#cb42-7" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="dv">75</span>, <span class="at">mean =</span> <span class="fl">3.0</span>, <span class="at">sd =</span> <span class="fl">2.5</span>),</span>
+<span id="cb42-8"><a href="#cb42-8" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="dv">75</span>, <span class="at">mean =</span> <span class="fl">4.2</span>, <span class="at">sd =</span> <span class="fl">2.5</span>),</span>
+<span id="cb42-9"><a href="#cb42-9" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="dv">75</span>, <span class="at">mean =</span> <span class="fl">5.8</span>, <span class="at">sd =</span> <span class="fl">2.5</span>),</span>
+<span id="cb42-10"><a href="#cb42-10" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="dv">75</span>, <span class="at">mean =</span> <span class="fl">7.5</span>, <span class="at">sd =</span> <span class="fl">2.5</span>)</span>
+<span id="cb42-11"><a href="#cb42-11" tabindex="-1"></a>  )</span>
+<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a>)</span>
+<span id="cb42-13"><a href="#cb42-13" tabindex="-1"></a></span>
+<span id="cb42-14"><a href="#cb42-14" tabindex="-1"></a><span class="co"># Run contrast analysis</span></span>
+<span id="cb42-15"><a href="#cb42-15" tabindex="-1"></a>result_full <span class="ot">&lt;-</span> <span class="fu">contrast_analysis</span>(</span>
+<span id="cb42-16"><a href="#cb42-16" tabindex="-1"></a>  <span class="at">data       =</span> aggression_data,</span>
+<span id="cb42-17"><a href="#cb42-17" tabindex="-1"></a>  <span class="at">dv         =</span> <span class="st">&quot;aggression&quot;</span>,</span>
+<span id="cb42-18"><a href="#cb42-18" tabindex="-1"></a>  <span class="at">conditions =</span> <span class="st">&quot;hours&quot;</span>,</span>
+<span id="cb42-19"><a href="#cb42-19" tabindex="-1"></a>  <span class="at">hypothesis =</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">0hr</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">0</span>, <span class="st">`</span><span class="at">1hr</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">1</span>, <span class="st">`</span><span class="at">3hr</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">3</span>, <span class="st">`</span><span class="at">5hr</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">5</span>),</span>
+<span id="cb42-20"><a href="#cb42-20" tabindex="-1"></a>  <span class="at">delta      =</span> <span class="dv">5</span>,</span>
+<span id="cb42-21"><a href="#cb42-21" tabindex="-1"></a>  <span class="at">delta_type =</span> <span class="st">&quot;share_signal&quot;</span>,</span>
+<span id="cb42-22"><a href="#cb42-22" tabindex="-1"></a>  <span class="at">d_interest_min =</span> <span class="fl">0.50</span>,</span>
+<span id="cb42-23"><a href="#cb42-23" tabindex="-1"></a>  <span class="at">graph1     =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb42-24"><a href="#cb42-24" tabindex="-1"></a>  <span class="at">graph2     =</span> <span class="cn">TRUE</span></span>
+<span id="cb42-25"><a href="#cb42-25" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## 
+## =================================================================
+##       CONTRAST ANALYSIS WITH EQUIVALENCE TESTING
+## =================================================================
+## 
+## Design:  between-subjects
+## Groups:  0hr, 1hr, 3hr, 5hr (k = 4)
+## N:       300
+## Alpha:   0.05
+## Orthogonal contrasts: Yes
+## Effect size metric: d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+## 
+## Hypothesized pattern: 0hr &lt; 1hr &lt; 3hr &lt; 5hr
+## 
+## ----- Contrast of Interest (NHST) -----
+##   b = 3.654, SE = 0.274, t(296) = 13.357, p &lt; .001 [SIGNIFICANT]
+##   d = 1.542, 95% CI [1.315, 1.770]
+## 
+## ----- Residual Contrasts (TOST Equivalence Tests) -----
+##   Delta type: share_signal (% of model variance)
+##   Reference d_interest_min: 0.5
+##   Equivalence bounds (converted to d-scale):
+##     Residual 1: max share = 5.0% =&gt; d bound = +/-0.1147
+##     Residual 2: max share = 5.0% =&gt; d bound = +/-0.1147
+## 
+##   Residual 1:
+##     NHST: b = 0.028, SE = 0.274, t(296) = 0.103, p = 0.918
+##     TOST: d = 0.012, 90% CI [-0.179, 0.202]
+##           p1 = 0.137, p2 = 0.187, p_TOST = 0.187 [NOT equivalent]
+## 
+##   Residual 2:
+##     NHST: b = -0.021, SE = 0.274, t(296) = -0.076, p = 0.939
+##     TOST: d = -0.009, 90% CI [-0.199, 0.182]
+##           p1 = 0.180, p2 = 0.143, p_TOST = 0.180 [NOT equivalent]
+## 
+## ----- Variance Decomposition -----
+##   Contrast of Interest: 100.0%
+##   Residual 1:           0.0%
+##   Residual 2:           0.0%
+## 
+## ----- Share-Based Equivalence Interpretation -----
+##   Equivalence bounds were derived from a maximum tolerable share of
+##   model variance, assuming the contrast of interest is at least
+##   d_interest_min = 0.5 in standardized units.
+##   Formula: delta_d = d_interest_min * sqrt(p / (1 - p)),
+##   where p = max_share / 100.
+##   This interpretation holds when the observed interest effect is at
+##   least d_interest_min; the conclusion logic already enforces this
+##   implicitly (interest must be significant for SUPPORTED).
+## 
+## =================================================================
+##   CONCLUSION: PARTIALLY SUPPORTED
+## =================================================================
+##   The data partially support the hypothesized pattern. The
+##   contrast of interest is statistically significant, but not all
+##   residual contrasts could be declared equivalent to zero. The
+##   hypothesized pattern does not fully account for the
+##   between-condition differences.
+## 
+## ----- APA-Formatted Results -----
+## Contrast of interest: b = 3.65, SE = 0.27, t(296) = 13.36, p &lt; .001, d = 1.54, 95% CI [1.32, 1.77].
+## Residual contrast 1 (TOST): b = 0.03, SE = 0.27, d = 0.01, 90% CI [-0.18, 0.20], equivalence bounds = +/-0.115 (from 5.0% share, d_int_min = 0.50), t1(296) = 1.10, p1 = .137, t2(296) = -0.89, p2 = .187, p_TOST = .187 (not equivalent to zero).
+## Residual contrast 2 (TOST): b = -0.02, SE = 0.27, d = -0.01, 90% CI [-0.20, 0.18], equivalence bounds = +/-0.115 (from 5.0% share, d_int_min = 0.50), t1(296) = 0.92, p1 = .180, t2(296) = -1.07, p2 = .143, p_TOST = .180 (not equivalent to zero).</code></pre>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto;" /></p>
+<p><strong>Note the hypothesis values.</strong> We didn’t use c(0, 1, 2,
+3) — we used c(0, 1, 3, 5) to match the actual hours of exposure. This
+means we’re predicting that aggression scales with actual dose, not
+ordinal position. The spacing matters: we expect the jump from 1hr to
+3hr to be twice as large as the jump from 0hr to 1hr.</p>
+<div id="interpreting-the-apa-output" class="section level3">
+<h3>Interpreting the APA Output</h3>
+<p>The <code>result_full$apa</code> field gives you copy-paste-ready
+text for your results section:</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a><span class="fu">cat</span>(result_full<span class="sc">$</span>apa)</span></code></pre></div>
+<pre><code>## Contrast of interest: b = 3.65, SE = 0.27, t(296) = 13.36, p &lt; .001, d = 1.54, 95% CI [1.32, 1.77].
+## Residual contrast 1 (TOST): b = 0.03, SE = 0.27, d = 0.01, 90% CI [-0.18, 0.20], equivalence bounds = +/-0.115 (from 5.0% share, d_int_min = 0.50), t1(296) = 1.10, p1 = .137, t2(296) = -0.89, p2 = .187, p_TOST = .187 (not equivalent to zero).
+## Residual contrast 2 (TOST): b = -0.02, SE = 0.27, d = -0.01, 90% CI [-0.20, 0.18], equivalence bounds = +/-0.115 (from 5.0% share, d_int_min = 0.50), t1(296) = 0.92, p1 = .180, t2(296) = -1.07, p2 = .143, p_TOST = .180 (not equivalent to zero).</code></pre>
+</div>
+</div>
+<div id="quick-reference-all-function-arguments" class="section level1">
+<h1>Quick Reference: All Function Arguments</h1>
+<table>
+<colgroup>
+<col width="8%" />
+<col width="6%" />
+<col width="85%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Argument</th>
+<th align="left">Default</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">data</td>
+<td align="left">(required)</td>
+<td align="left">Data frame containing the data.</td>
+</tr>
+<tr class="even">
+<td align="left">dv</td>
+<td align="left">(required)</td>
+<td align="left">Name of the DV column (string). Set NULL for
+within-subjects.</td>
+</tr>
+<tr class="odd">
+<td align="left">conditions</td>
+<td align="left">(required)</td>
+<td align="left">Name of the grouping variable column (string). Set NULL
+for within-subjects.</td>
+</tr>
+<tr class="even">
+<td align="left">hypothesis</td>
+<td align="left">(required)</td>
+<td align="left">Named numeric vector: names = condition labels, values
+= predicted pattern.</td>
+</tr>
+<tr class="odd">
+<td align="left">design</td>
+<td align="left">“between”</td>
+<td align="left">‘between’ or ‘within’.</td>
+</tr>
+<tr class="even">
+<td align="left">id</td>
+<td align="left">NULL</td>
+<td align="left">Name of the participant ID column (required for
+within-subjects).</td>
+</tr>
+<tr class="odd">
+<td align="left">delta</td>
+<td align="left">0.3</td>
+<td align="left">Equivalence bound(s). Scalar (same for all residuals)
+or vector (one per residual). Units depend on delta_type.</td>
+</tr>
+<tr class="even">
+<td align="left">delta_type</td>
+<td align="left">“dz”</td>
+<td align="left">‘dz’ (bound in d units) or ‘share_signal’ (bound in %
+of model variance).</td>
+</tr>
+<tr class="odd">
+<td align="left">d_interest_min</td>
+<td align="left">NULL</td>
+<td align="left">SESOI for the contrast of interest in d units. Required
+when delta_type = ‘share_signal’.</td>
+</tr>
+<tr class="even">
+<td align="left">alpha</td>
+<td align="left">0.05</td>
+<td align="left">Significance level.</td>
+</tr>
+<tr class="odd">
+<td align="left">confirm</td>
+<td align="left">FALSE</td>
+<td align="left">If TRUE, display the setup and pause for confirmation
+before running.</td>
+</tr>
+<tr class="even">
+<td align="left">bonferroni</td>
+<td align="left">TRUE</td>
+<td align="left">If TRUE and contrasts are non-orthogonal, apply
+Bonferroni to TOST alpha. (Auto-generated contrasts are always
+orthogonal, so this rarely activates.)</td>
+</tr>
+<tr class="odd">
+<td align="left">graph1</td>
+<td align="left">TRUE</td>
+<td align="left">If TRUE, display the forest plot.</td>
+</tr>
+<tr class="even">
+<td align="left">graph1.only</td>
+<td align="left">FALSE</td>
+<td align="left">If TRUE, return ONLY the forest plot (as a ggplot
+object), skip all other output.</td>
+</tr>
+<tr class="odd">
+<td align="left">graph2</td>
+<td align="left">FALSE</td>
+<td align="left">If TRUE, display the variance decomposition plot.</td>
+</tr>
+<tr class="even">
+<td align="left">graph2.only</td>
+<td align="left">FALSE</td>
+<td align="left">If TRUE, return ONLY the variance plot (as a ggplot
+object), skip all other output.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="common-questions" class="section level1">
+<h1>Common Questions</h1>
+<p><strong>Q: Do I need at least 3 groups?</strong> Yes. With only 2
+groups, there is no residual subspace — a standard <em>t</em>-test is
+sufficient. The function will stop with an error if <em>k</em> &lt;
+3.</p>
+<p><strong>Q: Does the order of names in the hypothesis vector
+matter?</strong> No. The function matches names to factor levels, not
+positions. <code>c(B = 1, A = 0, C = 2)</code> is identical to
+<code>c(A = 0, B = 1, C = 2)</code>.</p>
+<p><strong>Q: What if my groups have unequal sample sizes?</strong> The
+function handles unbalanced designs. The contrast weights and TOST tests
+are computed from the fitted linear model, which accommodates unequal
+<em>n</em>. However, the variance decomposition percentages and the
+<code>share_signal</code> conversion are most cleanly interpretable with
+balanced designs.</p>
+<p><strong>Q: Can I use this with more than 6 groups?</strong> Yes. The
+function works for any <em>k</em> ≥ 3. With <em>k</em> groups you’ll get
+<em>k</em> − 2 residual contrasts.</p>
+<p><strong>Q: What are the residual contrasts, exactly?</strong> They
+are an orthonormal basis for the subspace orthogonal to both the
+intercept and your contrast of interest. The function computes them
+automatically using <code>MASS::Null()</code>. The specific basis
+vectors are arbitrary (any rotation within this subspace would work),
+but their joint behavior is invariant — if any deviation from your
+pattern exists, at least one residual will detect it.</p>
+<p><strong>Q: Is the alpha correction handled automatically?</strong>
+Yes. The function uses the Intersection-Union Test (IUT) principle:
+because the contrasts are orthogonal, the overall Type I error rate is
+at most alpha without any correction. Within each TOST, each one-sided
+test is conducted at alpha (not alpha/2), following Lakens (2017).</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

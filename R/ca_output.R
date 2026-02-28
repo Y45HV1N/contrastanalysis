@@ -127,6 +127,31 @@
   }, character(1))
   cat("Hypothesized pattern: ", paste(pattern_parts, collapse = " < "), "\n\n", sep = "")
 
+  # --- Contrast weights table ---
+  cat("----- Contrast Weights -----\n")
+  cm <- results$contrast_matrix
+  # Header row
+  col_labels <- c("Interest", paste0("Residual ", seq_len(results$n_residuals)))
+  header <- sprintf("  %-12s", "")
+  for (cl in col_labels) header <- paste0(header, sprintf("%10s", cl))
+  cat(header, "\n")
+  # Data rows
+  for (i in seq_along(results$hyp_levels)) {
+    row_str <- sprintf("  %-12s", results$hyp_levels[i])
+    for (j in seq_len(ncol(cm))) {
+      row_str <- paste0(row_str, sprintf("%10.4f", cm[i, j]))
+    }
+    cat(row_str, "\n")
+  }
+  if (results$n_residuals > 0) {
+    cat("\n  Note: Residual contrasts are one possible orthonormal basis for the\n")
+    cat("  subspace orthogonal to the predicted pattern. Individual residual\n")
+    cat("  vectors are not uniquely defined, but their joint test is invariant:\n")
+    cat("  if any systematic deviation from the predicted pattern exists, at\n")
+    cat("  least one residual will detect it.\n")
+  }
+  cat("\n")
+
   # --- Contrast of interest ---
   cat("----- Contrast of Interest (NHST) -----\n")
   r <- results$interest
@@ -164,6 +189,10 @@
       ci_pct <- round(rr$ci_level_tost * 100)
 
       cat(sprintf("  Residual %d:\n", j))
+      # Show weights inline
+      wts <- results$residual_basis[, j]
+      wt_str <- paste(sprintf("%s: %+.3f", results$hyp_levels, wts), collapse = ", ")
+      cat("    Weights: ", wt_str, "\n", sep = "")
       cat(sprintf("    NHST: b = %.3f, SE = %.3f, t(%d) = %.3f, p %s\n",
                   rr$b, rr$se, rr$df, rr$t,
                   ifelse(rr$p_nhst < .001, "< .001", sprintf("= %.3f", rr$p_nhst))))

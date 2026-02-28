@@ -84,10 +84,20 @@ Decomposes between-group variance into a theory-driven contrast of
 interest and orthogonal residual contrasts, then tests whether the
 predicted pattern is significant (NHST) and whether deviations from it
 are negligibly small (TOST equivalence tests). Integrates Campbell (2024)
-integrated with Campbell (2024) and the Intersection-Union Test (IUT;
-Berger, 1982).
+and the Intersection-Union Test (IUT; Berger, 1982).
 }
 \details{
+\strong{Rationale:} The traditional C+R approach tests residual contrasts
+using NHST, interpreting non-significance as confirmation. However, a
+non-significant residual does not mean it is zero (Richter, 2016). This
+function replaces NHST-based residual testing with TOST equivalence
+tests, providing affirmative evidence that residuals are negligibly small.
+
+\strong{Residual contrasts:} Computed via \code{MASS::Null()} as an
+orthonormal basis for the subspace orthogonal to the contrast of interest.
+Individual residual vectors are not uniquely defined, but their joint test
+is invariant. The output displays a contrast weights table.
+
 \strong{Effect Sizes:} Between-subjects uses \code{d = b / sigma};
 within-subjects uses \code{d_z = M / SD} of contrast scores.
 
@@ -123,4 +133,8 @@ Campbell, H. (2024). Equivalence testing for linear regression.
 Lakens, D. (2017). Equivalence tests: A practical primer for \emph{t}
   tests, correlations, and meta-analyses. \emph{Social Psychological and
   Personality Science}, \emph{8}(4), 355--362.
+
+Richter, M. (2016). Residual tests in the analysis of planned contrasts:
+  Problems and solutions. \emph{Psychological Methods}, \emph{21}(1),
+  112--120. https://doi.org/10.1037/met0000044
 }

@@ -47,6 +47,28 @@
 #'   ggplot object, without printing text output.
 #'
 #' @details
+#' ## Rationale
+#'
+#' The traditional Contrast + Residual (C+R) approach tests residual
+#' contrasts using NHST and interprets non-significance as evidence that
+#' the predicted pattern fully accounts for the data. However, a
+#' non-significant residual does not mean the residual effect is zero
+#' --- absence of evidence is not evidence of absence (Richter, 2016).
+#' This function replaces NHST-based residual testing with TOST
+#' equivalence tests, providing affirmative evidence that residual
+#' deviations are negligibly small.
+#'
+#' ## Residual Contrasts
+#'
+#' The function uses `MASS::Null()` to compute an orthonormal basis for
+#' the subspace orthogonal to both the intercept and the contrast of
+#' interest. The individual residual vectors are not uniquely defined
+#' (any rotation within this subspace is equally valid), but their joint
+#' test is invariant: if any systematic deviation from the predicted
+#' pattern exists, at least one residual will detect it. The printed
+#' output includes a contrast weights table showing the exact weights
+#' used for all contrasts.
+#'
 #' ## Effect Sizes
 #'
 #' - **Between-subjects:** `d = b / sigma`, where `b` is the contrast
@@ -130,6 +152,10 @@
 #' Lakens, D. (2017). Equivalence tests: A practical primer for *t* tests,
 #'   correlations, and meta-analyses. *Social Psychological and Personality
 #'   Science*, *8*(4), 355--362.
+#'
+#' Richter, M. (2016). Residual tests in the analysis of planned contrasts:
+#'   Problems and solutions. *Psychological Methods*, *21*(1), 112--120.
+#'   https://doi.org/10.1037/met0000044
 #'
 #' @examples
 #' # Between-subjects: linear dose-response

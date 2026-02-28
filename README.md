@@ -2,17 +2,7 @@
 
 Contrast Analysis with Equivalence Testing for Residual Contrasts.
 
-Implements contrast analysis integrated with Campbell (2024) TOST equivalence testing. 
-
-
-Feel free to use, but be aware that this has not been validated nor peer-reviewed. It has, however, gone through rigorous rounds of stress testing (documentation on those will be uploaded soon also).
-
-More details about the rationale will be updated as soon as I have some time.
-
-All feedback are welcome (Yashvin.Seetahul@uibk.ac.at).
-
-
-
+Implements contrast analysis integrated with Campbell (2024) TOST equivalence testing. Uses the Intersection-Union Test (IUT; Berger, 1982) principle.
 
 ## Installation
 
@@ -97,8 +87,10 @@ citation("contrastanalysis")
 
 ## References
 
+- Berger, R. L. (1982). Multiparameter hypothesis testing and acceptance sampling. *Technometrics*, *24*(4), 295-300.
 - Campbell, H. (2024). Equivalence testing for linear regression. *Psychological Methods*, *29*(1), 88–98. https://doi.org/10.1037/met0000596
 - Lakens, D. (2017). Equivalence tests: A practical primer. *Social Psychological and Personality Science*, *8*(4), 355-362.
+- Richter, M. (2016). Residual tests in the analysis of planned contrasts: Problems and solutions. *Psychological Methods*, *21*(1), 112-120. https://doi.org/10.1037/met0000044
 
 ## License
 

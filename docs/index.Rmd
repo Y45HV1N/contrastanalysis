@@ -1,10 +1,7 @@
 ---
 title: "Tutorial: Contrast Analysis with Equivalence Testing"
 subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
-author:
-  - name: "Yashvin Seetahul"
-    orcid: "https://orcid.org/0000-0001-7487-3398"
-    affiliation: "University of Innsbruck"
+author: ""
 date: "Last updated: `r Sys.Date()`"
 output:
   html_document:
@@ -18,9 +15,6 @@ output:
     fig_height: 4.5
     self_contained: true
 ---
-
-
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -57,6 +51,50 @@ The logic follows the **Intersection-Union Test (IUT)** principle (Berger,
 1982): because the tests are on orthogonal contrasts, no alpha correction
 is needed across them.
 
+## Why This Function? The Problem with Traditional Residual Testing
+
+The traditional "Contrast + Residual" (C+R) approach tests both the
+contrast of interest and the residual contrasts using NHST. The reasoning
+goes: if the contrast of interest is significant and the residuals are
+not significant, the predicted pattern is confirmed.
+
+The problem is that **a non-significant residual does not mean the
+residual is zero**. This is a textbook logical error: absence of evidence
+is not evidence of absence (Altman & Bland, 1995; Hartung et al., 1983).
+A non-significant *p*-value for a residual contrast could mean the
+deviation truly is negligible, but it could also mean the study simply
+lacked statistical power to detect it.
+
+Richter (2016) formalized this critique, showing that when samples are
+small or residual effects are modest, traditional NHST-based residual
+tests have dangerously low power. In practice, this means researchers
+routinely "confirm" their predicted patterns by failing to reject a null
+they were never powered to detect --- a problem that grows worse with
+more conditions (and thus more residual contrasts).
+
+Faced with this issue, many researchers have essentially given up on
+testing residuals and instead only report the contrast of interest,
+treating residuals as a nuisance. This is understandable but
+unsatisfying: it means the analysis can tell you that the predicted
+trend *exists*, but it cannot tell you whether the predicted pattern
+*fully accounts* for the between-condition differences. An alternative
+pattern --- one not predicted by your theory --- could be driving much
+of the variance, and you would never know.
+
+This function offers a principled middle ground. Instead of relying on
+non-significance (which proves nothing), it uses **equivalence testing**
+(TOST; Lakens, 2017) to affirmatively demonstrate that residual
+deviations are *negligibly small* --- smaller than a threshold you
+pre-specify. This shifts the burden of proof: rather than hoping the
+residuals "aren't significant," you now provide positive statistical
+evidence that they fall within bounds you consider trivial. Following
+Campbell (2024), the equivalence test is applied to standardized
+regression coefficients from the contrast model.
+
+The result is a framework that lets you both (1) establish that the
+predicted effect exists and (2) rule out meaningful alternative patterns
+--- the full Contrast + Residual logic, done correctly.
+
 ## The Three Possible Conclusions
 
 | Conclusion | Meaning |
@@ -68,6 +106,7 @@ is needed across them.
 ## Key References
 
 - **Campbell (2024)** --- equivalence testing for linear regression.
+- **Richter (2016)** --- critique of NHST-based residual tests.
 - **Berger (1982)** --- Intersection-Union Test (IUT).
 - **Lakens (2017)** --- TOST equivalence testing.
 
@@ -75,8 +114,6 @@ is needed across them.
 # Setup
 
 ```{r load-function}
-#devtools::install_github("Y45HV1N/contrastanalysis", build_vignettes = TRUE)
-
 library(contrastanalysis)
 
 # We use MASS for data generation in this tutorial
@@ -179,8 +216,21 @@ SUPPORTED, PARTIALLY SUPPORTED, or NOT SUPPORTED (see Section 1.1).
 
 # The `hypothesis` Argument in Detail
 
-The hypothesis vector is flexible. The actual numbers don't matter --- only
-their *relative spacing*. All of these specify the same linear contrast:
+The `hypothesis` argument is the heart of the function. It tells the
+function *what pattern you predict*. Let's walk through exactly how this
+works.
+
+## What the Values Mean
+
+You supply a named numeric vector where:
+
+- The **names** are your condition/group labels (must match the factor
+  levels in your data).
+- The **values** encode the predicted *relative* pattern of means.
+
+Only the **relative spacing** matters. The function centers the values
+(subtracts their mean) and normalizes them to unit length internally. So
+all of these specify the exact same linear contrast:
 
 ```{r hyp-equivalence, eval=FALSE}
 # These are all identical:
@@ -189,8 +239,67 @@ hypothesis = c(A = 0, B = 0.5, C = 1, D = 1.5)
 hypothesis = c(A = 10, B = 20, C = 30, D = 40)
 ```
 
-Internally, the function centers the values (subtracts their mean) and
-normalizes them to unit length.
+Think of the values as "predicted mean scores on an arbitrary scale."
+If you predict that A has the lowest score, B is a little higher, C
+higher still, and D the highest --- with equal steps between them ---
+then `c(A = 0, B = 1, C = 2, D = 3)` encodes this perfectly.
+
+## How the Function Builds the Contrasts
+
+From your hypothesis values, the function automatically constructs a
+full set of **orthogonal contrasts** that partition the *k* − 1 degrees
+of freedom among group means:
+
+1. **Contrast of interest (1 df):** Derived directly from your
+   hypothesis. The centered and normalized values become the contrast
+   weights. This tests: "Do the group means follow the predicted
+   pattern?"
+
+2. **Residual contrasts (*k* − 2 df):** The function uses `MASS::Null()`
+   to compute an orthonormal basis for the subspace orthogonal to both
+   the intercept and the contrast of interest. These residuals
+   collectively capture *everything your predicted pattern does not
+   explain*.
+
+The output displays the full contrast weights table so you can see
+exactly what is being tested.
+
+## A Note on Residual Contrasts
+
+An important subtlety: the individual residual contrast vectors are
+**not uniquely defined**. `MASS::Null()` returns one possible basis, but
+any rotation within the residual subspace would be equally valid. This
+means the label "Residual 1" vs. "Residual 2" is arbitrary --- you
+should not over-interpret which specific comparison each residual
+corresponds to.
+
+What *is* invariant is their **joint** behavior: the set of residual
+contrasts as a whole captures all systematic deviations from your
+predicted pattern. If any such deviation exists, at least one residual
+will pick it up. This is why the function tests each residual and
+requires *all* of them to be equivalent to zero for a "SUPPORTED"
+conclusion.
+
+## Non-Linear Spacing
+
+The values don't have to be evenly spaced. You can encode any
+monotonic (or non-monotonic) pattern you predict:
+
+```{r hyp-nonlinear, eval=FALSE}
+# Diminishing returns: big jump from A to B, smaller increments after
+hypothesis = c(A = 0, B = 3, C = 4, D = 4.5)
+
+# Dose-response matching actual doses (0, 1, 3, 5 mg)
+hypothesis = c(Placebo = 0, Low = 1, Med = 3, High = 5)
+
+# Quadratic (inverted U): peak at B/C, lower at extremes
+hypothesis = c(A = 0, B = 1, C = 1, D = 0)
+```
+
+The spacing directly determines the contrast weights, so `c(0, 1, 3, 5)`
+tests a different pattern than `c(0, 1, 2, 3)`. The first gives
+more weight to the jump from Low to Med (which spans 2 units) than
+from Placebo to Low (which spans 1 unit).
 
 ## Encoding Equality Constraints (Ties)
 
@@ -216,6 +325,30 @@ result_tie <- contrast_analysis(
 ```
 
 The output's "Hypothesized pattern" line will display: `[A = B] < [C = D]`.
+
+## More Examples of Hypothesis Encoding
+
+Here are several common experimental designs and how to encode them:
+
+```{r hyp-examples, eval=FALSE}
+# 1. Simple two-level comparison with a third reference group
+#    "Treatment is better than both controls, which are equal"
+hypothesis = c(Control1 = 0, Control2 = 0, Treatment = 1)
+
+# 2. Helmert-style: "Any intervention > no intervention"
+#    Three interventions vs. one control
+hypothesis = c(Relevance = 1, PeerModel = 1, GrowthMindset = 1, Control = 0)
+
+# 3. Linear trend across five time points
+hypothesis = c(T1 = 1, T2 = 2, T3 = 3, T4 = 4, T5 = 5)
+
+# 4. Step function: "Nothing happens until the threshold, then it jumps"
+hypothesis = c(Dose0 = 0, Dose1 = 0, Dose2 = 1, Dose3 = 1)
+
+# 5. Three ordered groups with predicted unequal spacing
+#    "Experts >> Intermediates > Novices"
+hypothesis = c(Novice = 0, Intermediate = 1, Expert = 3)
+```
 
 
 # Within-Subjects Designs

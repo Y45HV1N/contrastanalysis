@@ -4,6 +4,13 @@ Contrast Analysis with Equivalence Testing for Residual Contrasts.
 
 Implements contrast analysis integrated with Campbell (2024) TOST equivalence testing. Uses the Intersection-Union Test (IUT; Berger, 1982) principle.
 
+Be aware that this function has not been validated, nor has this approach been peer-reviewed. It has however gone through rigorous phases of stress testing (the documentation will be uploaded soon).
+
+The theoretical rationale for this approach is currently being written in for a manuscript (update coming soon).
+
+I am open to any feedback (Yashvin.Seetahul@uibk.ac.at)!
+
+
 ## Installation
 
 ### From a local folder

@@ -7,16 +7,13 @@ author:
     affiliation: "University of Innsbruck"
 date: "Last updated: `r Sys.Date()`"
 output:
-  html_document:
-    toc: true
-    toc_float: true
-    toc_depth: 3
-    number_sections: true
-    theme: flatly
+  rmdformats::readthedown:
+    highlight: tango
     code_folding: show
+    self_contained: true
+    use_bookdown: true
     fig_width: 7
     fig_height: 4.5
-    self_contained: true
 ---
 
 ```{r setup, include=FALSE}

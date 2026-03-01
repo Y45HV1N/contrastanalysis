@@ -1,0 +1,838 @@
+---
+title: "Tutorial: Designs and Data Formats for `contrast_analysis()`"
+subtitle: "Between-Subjects, Within-Subjects, and How to Set Up Your Data"
+author:
+  - name: "Yashvin Seetahul"
+    orcid_id: "0000-0001-7487-3398"
+    affiliation: "University of Innsbruck"
+date: "Last updated: `r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: tango
+    code_folding: show
+    self_contained: true
+    use_bookdown: true
+    fig_width: 7
+    fig_height: 4.5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 4.5
+)
+```
+
+
+# Prerequisites
+
+This tutorial assumes you have already read the main tutorial
+(`vignette("tutorial")`), which covers the core logic of contrast analysis
+with equivalence testing, the three possible conclusions (SUPPORTED,
+PARTIALLY SUPPORTED, NOT SUPPORTED), and the `hypothesis`, `delta`, and
+`share_signal` arguments. Here, we focus on something that tutorial covered
+only briefly: **how different experimental designs change the way you set
+up your data and call the function**.
+
+The two designs the function supports are:
+
+| Design | Setting | Data format | Key arguments |
+|:-------|:--------|:------------|:--------------|
+| **Between-subjects** | Different people in each condition | Long format (one row per observation) | `dv`, `conditions` |
+| **Within-subjects** | Same people measured in every condition | Wide format (one row per person) | `id`, `dv = NULL`, `conditions = NULL` |
+
+We will walk through each design in detail, with realistic examples that
+show exactly what the data look like, how the function call changes, and
+how the output differs.
+
+```{r load-packages}
+library(contrastanalysis)
+library(MASS)
+library(ggplot2)
+set.seed(2025)
+```
+
+
+# Part 1: Between-Subjects Designs
+
+In a between-subjects design, each participant is assigned to exactly one
+condition. The data are in **long format**: each row is one participant,
+and you have a column for the dependent variable and a column that
+identifies which condition (group) the participant belongs to.
+
+## What the data look like
+
+Imagine an experiment testing whether exposure to increasingly violent
+video game content produces a dose--response increase in aggressive
+behavior. There are four independent groups: *None*, *Mild*, *Moderate*,
+and *Extreme*, with 60 participants per group.
+
+```{r between-data}
+n_per <- 60
+
+data_between <- data.frame(
+  participant = 1:(4 * n_per),
+  condition   = rep(c("None", "Mild", "Moderate", "Extreme"), each = n_per),
+  aggression  = c(
+    rnorm(n_per, mean = 3.0, sd = 2.5),
+    rnorm(n_per, mean = 4.5, sd = 2.5),
+    rnorm(n_per, mean = 6.0, sd = 2.5),
+    rnorm(n_per, mean = 7.5, sd = 2.5)
+  )
+)
+
+head(data_between)
+```
+
+Notice the structure: each row is a unique participant, `condition` tells
+us which group they are in, and `aggression` is the score. This is the
+standard "one observation per row" format that `lm()` expects.
+
+## The function call
+
+For between-subjects designs you need to tell the function two things
+about your data frame:
+
+- `dv` — the name of the dependent variable column, as a string.
+- `conditions` — the name of the grouping variable column, as a string.
+
+The `hypothesis` names must match the levels of the `conditions` column.
+
+```{r between-call}
+result_between <- contrast_analysis(
+  data       = data_between,
+  dv         = "aggression",
+  conditions = "condition",
+  hypothesis = c(None = 0, Mild = 1, Moderate = 2, Extreme = 3),
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = FALSE
+)
+```
+
+### What happens under the hood
+
+The function fits a standard linear model: `lm(aggression ~ condition)`.
+The contrast weights are applied to the group means estimated from this
+model, and the residual standard error (sqrt of MSE) serves as the
+denominator for the standardized effect size *d*. The effect size metric
+is reported as:
+
+> d = b / sigma (b = contrast coefficient, sigma = sqrt(MSE))
+
+This is the between-subjects standardization. The degrees of freedom are
+*N* − *k*, where *N* is the total sample size and *k* is the number of
+groups.
+
+
+## Practical tips for between-subjects data
+
+**Factor ordering.** The function matches hypothesis names to data levels,
+not positions. So `c(Extreme = 3, None = 0, Mild = 1, Moderate = 2)`
+is identical to what we wrote above. You do not need to set factor
+levels manually.
+
+**Unbalanced groups.** The function handles unequal group sizes. The
+linear model accommodates this automatically. However, the variance
+decomposition percentages are most cleanly interpretable with balanced
+designs.
+
+**Character vs. factor.** The `conditions` column can be either a
+character vector or a factor. The function will convert characters to
+factors internally.
+
+
+# Part 2: Within-Subjects Designs
+
+In a within-subjects (repeated-measures) design, the same participant
+provides a score in every condition. This is common in psychology: the
+same person plays multiple game types, rates multiple stimuli, or is
+tested across multiple time points.
+
+## What the data look like
+
+The critical difference is that within-subjects data must be in **wide
+format**: one row per participant, with a separate column for each
+condition.
+
+Imagine a study where 50 participants each play three video games —
+*Puzzle*, *Action*, and *Violent* — and we measure their heart rate during
+play. We predict that heart rate increases across the three types.
+
+```{r within-data}
+n <- 50
+
+# Simulate correlated data (rho = 0.6 between conditions)
+Sigma <- matrix(c(
+  100, 60, 60,
+   60, 100, 60,
+   60,  60, 100
+), nrow = 3)
+
+scores <- MASS::mvrnorm(n, mu = c(72, 78, 85), Sigma = Sigma)
+
+data_within <- data.frame(
+  pid    = 1:n,
+  Puzzle = scores[, 1],
+  Action = scores[, 2],
+  Violent = scores[, 3]
+)
+
+head(data_within)
+```
+
+Each row is one participant. The columns `Puzzle`, `Action`, and `Violent`
+hold that participant's score in each condition. There is no `condition`
+column — the conditions *are* the column names.
+
+## The function call
+
+The within-subjects call differs from the between-subjects call in four
+important ways:
+
+| Argument | Between-subjects | Within-subjects |
+|:---------|:-----------------|:----------------|
+| `dv` | Name of the DV column | `NULL` |
+| `conditions` | Name of the grouping column | `NULL` |
+| `design` | `"between"` (default) | `"within"` |
+| `id` | Not needed | Name of the participant ID column |
+
+Setting `dv = NULL` and `conditions = NULL` tells the function: "The
+condition names are the column names in the data frame, and the values in
+those columns are the repeated measurements." The `hypothesis` names must
+match these column names.
+
+```{r within-call}
+result_within <- contrast_analysis(
+  data       = data_within,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Puzzle = 0, Action = 1, Violent = 2),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = FALSE
+)
+```
+
+### What happens under the hood
+
+The function does **not** fit `lm()`. Instead, it computes within-subject
+contrast scores directly. For each participant, it takes the vector of
+scores across conditions and multiplies it by the contrast weights. This
+produces a single contrast score per participant per contrast. The test is
+then a one-sample *t*-test on these scores (testing whether the mean
+differs from zero).
+
+The effect size metric is:
+
+> d_z = M / SD (M and SD of within-subject contrast scores)
+
+This is Cohen's *d_z* — the paired-samples standardization. The degrees
+of freedom are *n* − 1, where *n* is the number of participants. Because
+within-subjects designs remove between-person variability, *d_z* is
+typically larger than the between-subjects *d* for the same true effect,
+and equivalence tests have more power.
+
+
+## Why wide format?
+
+You might wonder: "Why not long format like between-subjects?" The reason
+is that within-subjects contrast analysis requires computing scores
+*within* each participant. With wide format, each participant's full data
+vector is in one row, making the contrast score calculation
+straightforward: multiply the row by the weight vector.
+
+If your data are currently in long format, you need to pivot to wide
+first. Here is how:
+
+```{r long-to-wide}
+# Suppose you have long-format within-subjects data:
+data_long <- data.frame(
+  pid       = rep(1:50, each = 3),
+  condition = rep(c("Puzzle", "Action", "Violent"), times = 50),
+  hr        = c(t(scores))     # flatten the score matrix row-wise
+)
+
+head(data_long, 9)  # first 3 participants
+
+# Pivot to wide format:
+data_wide <- reshape(data_long,
+                     idvar     = "pid",
+                     timevar   = "condition",
+                     direction = "wide")
+
+# Clean up column names (reshape adds "hr." prefix)
+names(data_wide) <- gsub("hr\\.", "", names(data_wide))
+
+head(data_wide)
+```
+
+Now `data_wide` is in the correct format for `contrast_analysis()`.
+
+If you use `tidyr`, the equivalent is:
+
+```{r tidyr-pivot, eval=FALSE}
+library(tidyr)
+data_wide <- pivot_wider(data_long,
+                         id_cols     = pid,
+                         names_from  = condition,
+                         values_from = hr)
+```
+
+
+# Part 3: Side-by-Side Comparison
+
+To make the differences concrete, let's set up a scenario where the same
+research question could be answered with either design, and compare the
+two calls.
+
+**Research question:** Does cognitive load increase response time? Three
+levels: *Low*, *Medium*, *High*. We predict a linear increase.
+
+## Between-subjects version
+
+Different participants are randomly assigned to one of the three load
+conditions.
+
+```{r side-between}
+data_bw <- data.frame(
+  group = rep(c("Low", "Medium", "High"), each = 80),
+  rt    = c(
+    rnorm(80, mean = 450, sd = 80),
+    rnorm(80, mean = 500, sd = 80),
+    rnorm(80, mean = 550, sd = 80)
+  )
+)
+
+result_bw <- contrast_analysis(
+  data       = data_bw,
+  dv         = "rt",
+  conditions = "group",
+  hypothesis = c(Low = 1, Medium = 2, High = 3),
+  delta      = 0.3,
+  graph1     = FALSE,
+  graph2     = FALSE
+)
+```
+
+## Within-subjects version
+
+The same participants complete all three load levels (counterbalanced).
+
+```{r side-within}
+Sigma_rt <- matrix(c(
+  6400, 4800, 4800,
+  4800, 6400, 4800,
+  4800, 4800, 6400
+), nrow = 3)
+
+rt_scores <- MASS::mvrnorm(80, mu = c(450, 500, 550), Sigma = Sigma_rt)
+
+data_ws <- data.frame(
+  pid    = 1:80,
+  Low    = rt_scores[, 1],
+  Medium = rt_scores[, 2],
+  High   = rt_scores[, 3]
+)
+
+result_ws <- contrast_analysis(
+  data       = data_ws,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Low = 1, Medium = 2, High = 3),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.3,
+  graph1     = FALSE,
+  graph2     = FALSE
+)
+```
+
+## Comparing the outputs
+
+```{r comparison-table, echo=FALSE}
+comp <- data.frame(
+  Feature = c(
+    "Design",
+    "Effect size metric",
+    "Degrees of freedom",
+    "Interest d",
+    "Interest p",
+    "Conclusion"
+  ),
+  Between = c(
+    result_bw$design,
+    "d = b / sigma",
+    result_bw$df_resid,
+    round(result_bw$interest$d, 3),
+    format.pval(result_bw$interest$p, digits = 3),
+    result_bw$conclusion
+  ),
+  Within = c(
+    result_ws$design,
+    "d_z = M / SD",
+    result_ws$df_resid,
+    round(result_ws$interest$d, 3),
+    format.pval(result_ws$interest$p, digits = 3),
+    result_ws$conclusion
+  )
+)
+
+knitr::kable(comp, align = "lcc",
+             caption = "Same hypothesis, different designs")
+```
+
+Two things are worth noting. First, the within-subjects *d_z* is typically
+larger than the between-subjects *d* for the same true mean differences,
+because removing between-person variability reduces the denominator.
+Second, the within-subjects degrees of freedom are *n* − 1 (number of
+participants minus one), whereas between-subjects degrees of freedom are
+*N* − *k* (total observations minus number of groups).
+
+
+# Part 4: Design-Specific Worked Examples
+
+Now that you understand the mechanics, let's walk through several
+realistic research scenarios. Each example shows the experimental
+setup, the data structure, the exact function call, and how to interpret
+the results.
+
+
+## Example 1: Between-subjects with equality constraints
+
+**Scenario.** A clinical trial compares three active treatments (Drug A,
+Drug B, Drug C) against a placebo. The hypothesis is that all three drugs
+are equally effective and superior to placebo:
+[Placebo] < [Drug A = Drug B = Drug C].
+
+```{r ex1-data}
+data_drugs <- data.frame(
+  treatment = rep(c("Placebo", "DrugA", "DrugB", "DrugC"), each = 50),
+  symptom_relief = c(
+    rnorm(50, mean = 3.0, sd = 2),
+    rnorm(50, mean = 6.5, sd = 2),
+    rnorm(50, mean = 6.2, sd = 2),
+    rnorm(50, mean = 6.8, sd = 2)
+  )
+)
+```
+
+The hypothesis uses tied values for the three drugs:
+
+```{r ex1-call}
+result_drugs <- contrast_analysis(
+  data       = data_drugs,
+  dv         = "symptom_relief",
+  conditions = "treatment",
+  hypothesis = c(Placebo = 0, DrugA = 1, DrugB = 1, DrugC = 1),
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+**Reading the output.** The "Hypothesized pattern" line should read
+`Placebo < [DrugA = DrugB = DrugC]`. With *k* = 4, there are 2 residual
+contrasts. Because the drugs are predicted to be equal, the residuals
+test whether the drugs differ from each other. If both residuals are
+equivalent to zero, the data support the claim that all three drugs are
+equally effective.
+
+
+## Example 2: Between-subjects with non-linear spacing
+
+**Scenario.** A study on pricing psychology examines willingness to pay
+(WTP) across four price anchors: $10, $25, $50, and $100. The researcher
+predicts that WTP scales with the log of the anchor — a concave
+(diminishing returns) pattern — not linearly with the raw price.
+
+```{r ex2-data}
+data_pricing <- data.frame(
+  anchor = rep(c("$10", "$25", "$50", "$100"), each = 70),
+  wtp    = c(
+    rnorm(70, mean = 12, sd = 5),
+    rnorm(70, mean = 22, sd = 5),
+    rnorm(70, mean = 28, sd = 5),
+    rnorm(70, mean = 32, sd = 5)
+  )
+)
+```
+
+The hypothesis values encode the predicted non-linear relationship. Here,
+we use the log of the anchor prices as the predicted means:
+
+```{r ex2-call}
+# log(10) = 2.30, log(25) = 3.22, log(50) = 3.91, log(100) = 4.61
+result_pricing <- contrast_analysis(
+  data       = data_pricing,
+  dv         = "wtp",
+  conditions = "anchor",
+  hypothesis = c(`$10` = log(10), `$25` = log(25),
+                 `$50` = log(50), `$100` = log(100)),
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = FALSE
+)
+```
+
+**Why this matters.** If you had naively used `c(10, 25, 50, 100)` as
+the hypothesis, you would be testing a *linear* relationship between raw
+price and WTP. But a linear pattern predicts equal dollar increments in
+WTP for each dollar increment in anchor, which is not what diminishing
+returns looks like. By using `log()` values, the contrast weights
+appropriately down-weight the gap between \$50 and \$100 relative to the
+gap between \$10 and \$25, matching the theoretical prediction.
+
+This is the power of contrast analysis: **the hypothesis values directly
+encode your theory**. Use them thoughtfully.
+
+
+## Example 3: Within-subjects with three time points
+
+**Scenario.** Participants complete a cognitive task at three time points:
+*Baseline*, *Post-Training*, and *Follow-Up*. The researcher predicts
+improvement from Baseline to Post-Training, with maintenance at
+Follow-Up: Baseline < [Post-Training = Follow-Up].
+
+```{r ex3-data}
+n <- 60
+Sigma_time <- matrix(c(
+  16, 10, 10,
+  10, 16, 12,
+  10, 12, 16
+), nrow = 3)
+
+time_scores <- MASS::mvrnorm(n, mu = c(50, 60, 59), Sigma = Sigma_time)
+
+data_time <- data.frame(
+  pid       = 1:n,
+  Baseline  = time_scores[, 1],
+  PostTrain = time_scores[, 2],
+  FollowUp  = time_scores[, 3]
+)
+```
+
+The equality constraint between Post-Training and Follow-Up encodes the
+prediction that gains are maintained:
+
+```{r ex3-call}
+result_time <- contrast_analysis(
+  data       = data_time,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Baseline = 0, PostTrain = 1, FollowUp = 1),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.2,
+  graph1     = TRUE,
+  graph2     = FALSE
+)
+```
+
+**What the residual tests.** With *k* = 3, there is a single residual
+contrast. Given the hypothesis `Baseline < [PostTrain = FollowUp]`, the
+residual captures the difference between PostTrain and FollowUp. If it is
+equivalent to zero, the data support the claim that the training gains
+are maintained at follow-up.
+
+
+## Example 4: Within-subjects with a step function
+
+**Scenario.** Participants view faces displaying four levels of emotional
+intensity — *Neutral*, *Mild*, *Moderate*, and *Intense* — and we measure
+amygdala activation (via fMRI). The theory predicts a threshold effect:
+activation stays flat for Neutral and Mild, then jumps and stays elevated
+for Moderate and Intense.
+
+```{r ex4-data}
+n <- 45
+Sigma_fmri <- matrix(0.3, nrow = 4, ncol = 4)
+diag(Sigma_fmri) <- 1
+Sigma_fmri <- 0.8^2 * Sigma_fmri
+
+fmri_scores <- MASS::mvrnorm(n, mu = c(1.0, 1.1, 2.5, 2.6), Sigma = Sigma_fmri)
+
+data_fmri <- data.frame(
+  pid      = 1:n,
+  Neutral  = fmri_scores[, 1],
+  Mild     = fmri_scores[, 2],
+  Moderate = fmri_scores[, 3],
+  Intense  = fmri_scores[, 4]
+)
+```
+
+The hypothesis encodes the step function: the two low conditions share
+one value, and the two high conditions share another:
+
+```{r ex4-call}
+result_fmri <- contrast_analysis(
+  data       = data_fmri,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Neutral = 0, Mild = 0, Moderate = 1, Intense = 1),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.25,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+**What the residuals test.** With *k* = 4 and a step-function hypothesis,
+there are 2 residual contrasts. Together, they capture two kinds of
+deviation from the step model: (a) any difference between Neutral and
+Mild (which should be equal), and (b) any difference between Moderate and
+Intense (which should also be equal). If both are equivalent to zero,
+the step function is a sufficient description of the activation pattern.
+
+
+## Example 5: Within-subjects, k = 5, linear trend
+
+**Scenario.** A learning experiment measures recall accuracy across five
+study sessions. The theory predicts a steady linear improvement.
+
+```{r ex5-data}
+n <- 55
+k <- 5
+Sigma_learn <- matrix(0.5, k, k)
+diag(Sigma_learn) <- 1
+Sigma_learn <- 4^2 * Sigma_learn
+
+learn_scores <- MASS::mvrnorm(n, mu = c(40, 48, 56, 64, 72), Sigma = Sigma_learn)
+
+data_learn <- data.frame(
+  pid = 1:n,
+  S1  = learn_scores[, 1],
+  S2  = learn_scores[, 2],
+  S3  = learn_scores[, 3],
+  S4  = learn_scores[, 4],
+  S5  = learn_scores[, 5]
+)
+```
+
+```{r ex5-call}
+result_learn <- contrast_analysis(
+  data       = data_learn,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(S1 = 1, S2 = 2, S3 = 3, S4 = 4, S5 = 5),
+  design     = "within",
+  id         = "pid",
+  delta      = 0.3,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+**What to look for.** With *k* = 5, there are 3 residual contrasts. A
+linear hypothesis predicts equal increments between sessions. The
+residuals collectively capture any curvature, plateaus, or irregular
+jumps. If the learning curve is truly linear, all three residuals should
+be equivalent to zero.
+
+
+## Example 6: Between-subjects with `share_signal`
+
+**Scenario.** The same aggression study from Part 1, but now the
+researcher wants to define "negligible" residuals in terms of percentage
+of explained variance rather than raw *d* units.
+
+```{r ex6-call}
+result_share <- contrast_analysis(
+  data       = data_between,
+  dv         = "aggression",
+  conditions = "condition",
+  hypothesis = c(None = 0, Mild = 1, Moderate = 2, Extreme = 3),
+  delta      = 5,
+  delta_type = "share_signal",
+  d_interest_min = 0.50,
+  graph1     = TRUE,
+  graph2     = TRUE
+)
+```
+
+The equivalence bound section of the output now shows the conversion:
+
+> max share = 5.0% => d bound = ±0.229
+
+This tells you: "If the true residual effect were *d* = 0.229, a residual
+contrast would account for exactly 5% of the model variance (given the
+interest effect is at least *d* = 0.50)." Anything smaller is declared
+negligible.
+
+
+# Part 5: Common Mistakes and How to Fix Them
+
+### Mistake 1: Using long format for within-subjects
+
+```{r mistake1, error=TRUE}
+# This will NOT work:
+data_long_wrong <- data.frame(
+  pid       = rep(1:50, each = 3),
+  condition = rep(c("A", "B", "C"), times = 50),
+  score     = rnorm(150)
+)
+
+# This tries to treat it as between-subjects (each row = separate person)
+# The pid column is ignored and you get wrong results.
+# You must pivot to wide format first!
+```
+
+**Fix:** Use `reshape()` or `tidyr::pivot_wider()` to convert to wide
+format before calling `contrast_analysis()` with `design = "within"`.
+
+
+### Mistake 2: Forgetting `design = "within"`
+
+If you have wide-format data but forget to set `design = "within"`, the
+function defaults to between-subjects and tries to look for `dv` and
+`conditions` columns. You will get an error because those columns do not
+exist.
+
+```{r mistake2, error=TRUE, eval=FALSE}
+# Forgetting design = "within":
+contrast_analysis(
+  data_within, dv = NULL, conditions = NULL,
+  hypothesis = c(Puzzle = 0, Action = 1, Violent = 2),
+  delta = 0.3
+  # Missing: design = "within", id = "pid"
+)
+```
+
+**Fix:** Always set `design = "within"` and `id = "pid"` (or whatever
+your ID column is called) for repeated-measures data.
+
+
+### Mistake 3: Hypothesis names don't match column names
+
+For within-subjects, the hypothesis names must exactly match the column
+names in the data frame. For between-subjects, they must match the levels
+of the grouping factor.
+
+```{r mistake3, error=TRUE, eval=FALSE}
+# Column is "Violent" but hypothesis says "violent" (lowercase):
+contrast_analysis(
+  data_within, dv = NULL, conditions = NULL,
+  hypothesis = c(Puzzle = 0, Action = 1, violent = 2),  # lowercase 'v'
+  design = "within", id = "pid", delta = 0.3
+)
+# Error: hypothesis names do not match condition names
+```
+
+**Fix:** Check spelling and case. Use `names(your_data)` for
+within-subjects or `levels(factor(your_data$group))` for between-subjects
+to see the exact labels.
+
+
+### Mistake 4: Including the ID column in hypothesis names
+
+The participant ID column is *not* a condition. Don't include it:
+
+```{r mistake4, eval=FALSE}
+# WRONG: "pid" is not a condition
+hypothesis = c(pid = 0, Puzzle = 0, Action = 1, Violent = 2)
+
+# CORRECT: only the condition columns
+hypothesis = c(Puzzle = 0, Action = 1, Violent = 2)
+```
+
+
+# Part 6: Quick Reference Cheat Sheet
+
+## Between-subjects call template
+
+```{r template-between, eval=FALSE}
+result <- contrast_analysis(
+  data       = my_data,
+  dv         = "outcome_column",
+  conditions = "group_column",
+  hypothesis = c(GroupA = 0, GroupB = 1, GroupC = 2),
+  design     = "between",      # default, can omit
+  delta      = 0.3
+)
+```
+
+## Within-subjects call template
+
+```{r template-within, eval=FALSE}
+result <- contrast_analysis(
+  data       = my_wide_data,
+  dv         = NULL,
+  conditions = NULL,
+  hypothesis = c(Cond1 = 0, Cond2 = 1, Cond3 = 2),
+  design     = "within",
+  id         = "participant_id_column",
+  delta      = 0.3
+)
+```
+
+## Decision flowchart
+
+```
+Is the same person measured in every condition?
+│
+├── YES (within-subjects)
+│   ├── Is your data in wide format? (one row per person, one column per condition)
+│   │   ├── YES → Use directly
+│   │   └── NO  → Pivot to wide first (reshape / pivot_wider)
+│   │
+│   └── Set: design = "within", dv = NULL, conditions = NULL, id = "pid"
+│         hypothesis names = column names
+│
+└── NO (between-subjects)
+    ├── Data should be in long format (one row per observation)
+    │
+    └── Set: dv = "score", conditions = "group"
+          hypothesis names = factor levels of grouping variable
+```
+
+## Key differences at a glance
+
+```{r cheatsheet-table, echo=FALSE}
+cheat <- data.frame(
+  Feature = c(
+    "Data format",
+    "dv",
+    "conditions",
+    "design",
+    "id",
+    "hypothesis names match...",
+    "Effect size",
+    "Degrees of freedom",
+    "Underlying test",
+    "Power advantage"
+  ),
+  Between = c(
+    "Long (one row per person)",
+    "DV column name",
+    "Group column name",
+    '"between" (default)',
+    "Not needed",
+    "Levels of grouping factor",
+    "d = b / sqrt(MSE)",
+    "N - k",
+    "Regression (lm)",
+    "---"
+  ),
+  Within = c(
+    "Wide (one row per person)",
+    "NULL",
+    "NULL",
+    '"within"',
+    "ID column name",
+    "Condition column names",
+    "d_z = M / SD of contrast scores",
+    "n - 1",
+    "One-sample t on contrast scores",
+    "Removes between-person variance"
+  )
+)
+
+knitr::kable(cheat, align = "lll")
+```

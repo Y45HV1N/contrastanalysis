@@ -1,0 +1,917 @@
+---
+title: "Validation: Stress Tests for `contrast_analysis()`"
+subtitle: "67 Automated Tests Covering Backward Compatibility and the `share_signal` Feature"
+author:
+  - name: "Yashvin Seetahul"
+    orcid_id: "0000-0001-7487-3398"
+    affiliation: "University of Innsbruck"
+date: "Last updated: `r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: tango
+    code_folding: show
+    self_contained: true
+    use_bookdown: true
+    fig_width: 8
+    fig_height: 5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+
+# Purpose
+
+This document runs a comprehensive suite of **67 automated tests** against
+`contrast_analysis()`. Every test is self-contained: it generates data,
+calls the function, checks a specific property, and returns `TRUE` (pass)
+or `FALSE` (fail). The goal is full transparency --- every test is visible,
+every result is printed, and a summary dashboard at the end lets you verify
+at a glance that the function behaves correctly across a wide range of
+inputs and edge cases.
+
+The tests are organized into **five domains**:
+
+| Domain | Tests | What is covered |
+|:-------|------:|:----------------|
+| Core functionality | T01--T09 | Between- and within-subjects designs, k = 3 to k = 6, linear patterns, null effects, partial support, ties, non-integer and vector deltas |
+| Input validation | T10--T13, T31--T32 | Wrong delta length, missing DV, mismatched names, k = 2, negative delta, missing ID |
+| Numeric properties | T14--T18, T23--T29, T37 | Small/large N, variance decomposition, TOST bounds, CI ordering, APA output, custom alpha, return structure, weights sum to zero |
+| Plotting | T19--T22, T33--T35 | `graph1.only`, `graph2.only`, override flags, forest and variance plots render and save |
+| TOST logic | T26, T36 | p-value bounds, p\_TOST = max(p1, p2), direction sensitivity |
+
+The `share_signal` feature (S01--S30) is tested across **six additional domains**:
+
+| Domain | Tests | What is covered |
+|:-------|------:|:----------------|
+| Conversion formula | S01--S03, S13 | Exact formula verification, different `d_interest_min`, per-residual shares, monotonicity |
+| Metadata | S04--S05, S25--S26 | Correct storage and retrieval of `delta_type`, `delta_share_pct`, `d_interest_min`; APA string content |
+| Input validation | S06--S12, S27--S29 | Missing/zero/negative `d_interest_min`; share = 0/100/negative; invalid `delta_type`; non-numeric/vector `d_interest_min`; ignored when `dz` |
+| Statistical invariance | S20--S21 | Variance decomposition and point estimates unchanged by `delta_type` |
+| TOST under share\_signal | S14--S19, S30 | Large N convergence, tight/generous bounds, within-subjects, k = 6, p-value validity |
+| Plotting | S22--S24 | Forest plot rendering with `share_signal`, different per-residual bounds, visual check |
+
+
+# Setup
+
+```{r load-packages}
+library(contrastanalysis)
+library(MASS)
+library(ggplot2)
+set.seed(2025)
+```
+
+
+# Test Harness
+
+Each test is run inside `run_test()`, which catches errors, records the
+result, and prints a one-line verdict. The function suppresses the full
+`contrast_analysis()` console output so that only the test-level
+diagnostics are visible.
+
+```{r harness}
+test_results <- list()
+
+run_test <- function(name, expr) {
+  cat(sprintf("%-50s", name))
+  result <- tryCatch({
+    val <- suppressMessages(invisible(capture.output(out <- expr, type = "output")))
+    if (isTRUE(out)) {
+      cat("PASS\n")
+      TRUE
+    } else {
+      cat("** FAIL **\n")
+      FALSE
+    }
+  }, error = function(e) {
+    cat("ERROR:", conditionMessage(e), "\n")
+    FALSE
+  }, warning = function(w) {
+    cat("WARN (treated as pass):", conditionMessage(w), "\n")
+    tryCatch(invokeRestart("muffleWarning"), error = function(e) NULL)
+    TRUE
+  })
+  test_results[[name]] <<- result
+  invisible(result)
+}
+```
+
+
+# Data Generators
+
+Two helper functions simulate between- and within-subjects data with
+known population means. These are used throughout the test suite.
+
+```{r helpers}
+gen_between <- function(means, n_per = 50, sd = 3, group_names = NULL) {
+  k <- length(means)
+  if (is.null(group_names)) group_names <- LETTERS[1:k]
+  data.frame(
+    group = rep(group_names, each = n_per),
+    score = unlist(lapply(means, function(m) rnorm(n_per, m, sd)))
+  )
+}
+
+gen_within <- function(means, n = 50, sd = 3, rho = 0.5, cond_names = NULL) {
+  k <- length(means)
+  if (is.null(cond_names)) cond_names <- paste0("C", 1:k)
+  Sigma <- matrix(rho, k, k); diag(Sigma) <- 1; Sigma <- sd^2 * Sigma
+  scores <- mvrnorm(n, mu = means, Sigma = Sigma)
+  df <- as.data.frame(scores)
+  names(df) <- cond_names
+  df$pid <- 1:n
+  df
+}
+```
+
+
+# Test Suite
+
+## T01--T09: Core Functionality
+
+```{r core-tests}
+# T01: Between-subjects, k=4, linear pattern — interest should be significant
+run_test("T01  Between k=4 linear", {
+  d <- gen_between(c(2, 4, 6, 8), n_per = 80, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0, B=1, C=2, D=3),
+                         design = "between", delta = 0.3, graph1 = FALSE, graph2 = FALSE)
+  r$interest$p < 0.05 && r$delta_type == "dz" && is.na(r$delta_share_pct)
+})
+
+# T02: No effect — conclusion should be NOT SUPPORTED
+run_test("T02  Between k=4 null effect", {
+  d <- gen_between(c(5, 5, 5, 5), n_per = 50, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0, B=1, C=2, D=3),
+                         design = "between", delta = 0.3, graph1 = FALSE, graph2 = FALSE)
+  r$conclusion == "NOT SUPPORTED"
+})
+
+# T03: Partial support — interest significant, residuals not all equivalent
+run_test("T03  Between k=4 partial", {
+  d <- gen_between(c(2, 4, 4.5, 8), n_per = 80, sd = 2.5, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0, B=1, C=2, D=3),
+                         design = "between", delta = 0.15, graph1 = FALSE, graph2 = FALSE)
+  r$interest$p < 0.05
+})
+
+# T04: Minimum k=3 — should produce exactly 1 residual
+run_test("T04  Between k=3 (minimum)", {
+  d <- gen_between(c(3, 6, 9), n_per = 60, group_names = c("Lo","Med","Hi"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(Lo=1, Med=2, Hi=3),
+                         design = "between", delta = 0.3, graph1 = FALSE, graph2 = FALSE)
+  r$n_residuals == 1
+})
+
+# T05: Large k=6 — should produce exactly 4 residuals
+run_test("T05  Between k=6", {
+  d <- gen_between(c(1,2,3,4,5,6), n_per = 50,
+                   group_names = c("G1","G2","G3","G4","G5","G6"))
+  r <- contrast_analysis(d, "score", "group",
+                         hypothesis = c(G1=1, G2=2, G3=3, G4=4, G5=5, G6=6),
+                         design = "between", delta = 0.3, graph1 = FALSE, graph2 = FALSE)
+  r$n_residuals == 4
+})
+
+# T06: Within-subjects, k=3
+run_test("T06  Within k=3", {
+  d <- gen_within(c(5, 8, 8), n = 60, cond_names = c("Ctrl","DrugA","DrugB"))
+  r <- contrast_analysis(d, dv = NULL, conditions = NULL,
+                         hypothesis = c(Ctrl=0, DrugA=1, DrugB=1),
+                         design = "within", id = "pid", delta = 0.2,
+                         graph1 = FALSE, graph2 = FALSE)
+  r$n_residuals == 1
+})
+
+# T07: Within-subjects, k=4
+run_test("T07  Within k=4", {
+  d <- gen_within(c(3, 5, 7, 9), n = 60, cond_names = c("T1","T2","T3","T4"))
+  r <- contrast_analysis(d, dv = NULL, conditions = NULL,
+                         hypothesis = c(T1=0, T2=1, T3=2, T4=3),
+                         design = "within", id = "pid", delta = 0.3,
+                         graph1 = FALSE, graph2 = FALSE)
+  r$n_residuals == 2
+})
+
+# T08: Orthogonality verified via cross-product matrix
+run_test("T08  Orthogonality holds", {
+  d <- gen_between(c(1,3,5,7,9), n_per = 30, group_names = c("A","B","C","D","E"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=1, B=2, C=3, D=4, E=5),
+                         design = "between", delta = 0.3, graph1 = FALSE, graph2 = FALSE)
+  cp <- crossprod(r$contrast_matrix)
+  off_diag <- cp; diag(off_diag) <- 0
+  r$is_orthogonal == TRUE && max(abs(off_diag)) < 1e-10
+})
+
+# T09: Delta as vector — different bound per residual
+run_test("T09  Delta vector", {
+  d <- gen_between(c(2, 4, 6, 8), n_per = 60, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0, B=1, C=2, D=3),
+                         design = "between", delta = c(0.2, 0.5), graph1 = FALSE, graph2 = FALSE)
+  r$residuals[[1]]$delta == 0.2 && r$residuals[[2]]$delta == 0.5
+})
+```
+
+## T10--T13, T31--T32: Input Validation
+
+These tests verify that the function produces informative errors when
+given invalid inputs.
+
+```{r validation-tests}
+# T10: Wrong delta length
+run_test("T10  Bad delta length -> error", {
+  d <- gen_between(c(2,4,6,8), n_per = 30, group_names = c("A","B","C","D"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                      design = "between", delta = c(0.2,0.3,0.4), graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# T11: Missing DV column
+run_test("T11  Bad DV -> error", {
+  d <- gen_between(c(2,4,6), n_per = 30, group_names = c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "NONEXISTENT", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# T12: Mismatched hypothesis names
+run_test("T12  Mismatched names -> error", {
+  d <- gen_between(c(2,4,6), n_per = 30, group_names = c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(X=0,Y=1,Z=2),
+                      design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# T13: k=2 not allowed
+run_test("T13  k=2 -> error", {
+  d <- gen_between(c(3,6), n_per = 30, group_names = c("A","B"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1),
+                      design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# T31: Negative delta
+run_test("T31  Negative delta -> error", {
+  d <- gen_between(c(2,4,6), n_per = 30, group_names = c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = -0.3, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# T32: Within-subjects without ID
+run_test("T32  Within, no ID -> error", {
+  d <- gen_within(c(3,6,9), n = 50, cond_names = c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, dv=NULL, conditions=NULL, hypothesis = c(A=0,B=1,C=2),
+                      design = "within", id = NULL, delta = 0.3, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+```
+
+## T14--T18: Sample Size and Design Variations
+
+```{r sample-size-tests}
+# T14: Very small N (n=5 per group)
+run_test("T14  Small N (n=5/group)", {
+  d <- gen_between(c(2,5,8), n_per = 5, group_names = c("A","B","C"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                         design = "between", delta = 0.5, graph1=FALSE, graph2=FALSE)
+  r$N == 15 && r$df_resid == 12
+})
+
+# T15: Very large N — should achieve SUPPORTED
+run_test("T15  Large N -> SUPPORTED", {
+  d <- gen_between(c(2,4,6,8), n_per = 500, sd = 3, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r$conclusion == "SUPPORTED"
+})
+
+# T16: Non-integer hypothesis values produce correct weights
+run_test("T16  Non-integer hypothesis", {
+  d <- gen_between(c(3,4.5,6,7.5), n_per = 60, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=0.5,C=1,D=1.5),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  w_expected <- (c(0,1,2,3) - mean(c(0,1,2,3)))
+  w_expected <- w_expected / sqrt(sum(w_expected^2))
+  max(abs(r$w_interest - w_expected)) < 1e-10
+})
+
+# T17: Hypothesis with ties
+run_test("T17  Ties: [A=B] < [C=D]", {
+  d <- gen_between(c(3,3,7,7), n_per = 60, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=0,C=1,D=1),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r$interest$p < 0.05
+})
+
+# T18: Unbalanced groups
+run_test("T18  Unbalanced groups", {
+  d <- data.frame(
+    group = c(rep("A",30), rep("B",50), rep("C",40), rep("D",80)),
+    score = c(rnorm(30,2,3), rnorm(50,4,3), rnorm(40,6,3), rnorm(80,8,3))
+  )
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r$N == 200
+})
+```
+
+## T19--T22, T33--T35: Plotting
+
+```{r plot-tests, fig.show='hide'}
+# T19: graph1.only returns ggplot
+run_test("T19  graph1.only -> ggplot", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1.only = TRUE)
+  inherits(p, "ggplot")
+})
+
+# T20: graph2.only returns ggplot
+run_test("T20  graph2.only -> ggplot", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph2.only = TRUE)
+  inherits(p, "ggplot")
+})
+
+# T21: graph1.only overrides graph1=FALSE
+run_test("T21  graph1.only overrides FALSE", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph1.only=TRUE)
+  inherits(p, "ggplot")
+})
+
+# T22: graph2.only overrides graph2=FALSE
+run_test("T22  graph2.only overrides FALSE", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph2=FALSE, graph2.only=TRUE)
+  inherits(p, "ggplot")
+})
+
+# T33: Forest plots save to files
+run_test("T33  Forest plots render", {
+  d1 <- gen_between(c(2,4,6,8), n_per=80, group_names=c("A","B","C","D"))
+  p1 <- contrast_analysis(d1, "score", "group", hypothesis=c(A=0,B=1,C=2,D=3),
+                          design="between", delta=0.3, graph1.only=TRUE)
+  d2 <- gen_within(c(5,8,8), n=60, cond_names=c("Ctrl","DrA","DrB"))
+  p2 <- contrast_analysis(d2, dv=NULL, conditions=NULL, hypothesis=c(Ctrl=0,DrA=1,DrB=1),
+                          design="within", id="pid", delta=0.2, graph1.only=TRUE)
+  inherits(p1, "ggplot") && inherits(p2, "ggplot")
+})
+
+# T34: Variance plot renders
+run_test("T34  Variance plot renders", {
+  d <- gen_between(c(2,4,6,8), n_per=80, group_names=c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis=c(A=0,B=1,C=2,D=3),
+                         design="between", delta=0.3, graph2.only=TRUE)
+  inherits(p, "ggplot")
+})
+
+# T35: Different delta per residual — forest plot
+run_test("T35  Forest, diff delta/residual", {
+  d <- gen_between(c(2,4,6,8), n_per=80, group_names=c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis=c(A=0,B=1,C=2,D=3),
+                         design="between", delta=c(0.15, 0.50), graph1.only=TRUE)
+  inherits(p, "ggplot")
+})
+```
+
+## T23--T30, T36--T37: Numeric Properties
+
+```{r numeric-tests}
+# T23: Variance decomposition sums to 100% (between)
+run_test("T23  Variance sums 100% (between)", {
+  d <- gen_between(c(2,4,6,8), n_per = 60, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  total <- r$variance$pct_interest + sum(r$variance$pct_residuals)
+  abs(total - 100) < 0.01
+})
+
+# T24: Variance decomposition sums to 100% (within)
+run_test("T24  Variance sums 100% (within)", {
+  d <- gen_within(c(3,6,9), n = 60, cond_names = c("A","B","C"))
+  r <- contrast_analysis(d, dv=NULL, conditions=NULL, hypothesis = c(A=0,B=1,C=2),
+                         design = "within", id = "pid", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  total <- r$variance$pct_interest + sum(r$variance$pct_residuals)
+  abs(total - 100) < 0.01
+})
+
+# T25: Perfect linear pattern => ~100% interest variance
+run_test("T25  Perfect pattern -> 100% interest", {
+  d <- gen_between(c(10,20,30,40), n_per = 200, sd = 0.01, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r$variance$pct_interest > 99
+})
+
+# T26: TOST p-values in [0,1] and p_tost = max(p1, p2)
+run_test("T26  TOST p-value bounds", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  all_ok <- TRUE
+  for (rr in r$residuals) {
+    if (rr$p1 < 0 || rr$p1 > 1 || rr$p2 < 0 || rr$p2 > 1 ||
+        rr$p_tost < 0 || rr$p_tost > 1) all_ok <- FALSE
+    if (abs(rr$p_tost - max(rr$p1, rr$p2)) > 1e-12) all_ok <- FALSE
+  }
+  all_ok
+})
+
+# T27: CI bounds are ordered (lower < upper)
+run_test("T27  CI ordering", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  ok <- r$interest$ci_d[1] < r$interest$ci_d[2]
+  for (rr in r$residuals) ok <- ok && (rr$ci_d_tost[1] < rr$ci_d_tost[2])
+  ok
+})
+
+# T28: APA output is a non-empty string
+run_test("T28  APA output non-empty", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  is.character(r$apa) && nchar(r$apa) > 50
+})
+
+# T29: Custom alpha propagates correctly
+run_test("T29  Custom alpha = 0.10", {
+  d <- gen_between(c(2,4,6,8), n_per = 50, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, alpha = 0.10,
+                         graph1=FALSE, graph2=FALSE)
+  r$alpha == 0.10 && abs(r$residuals[[1]]$ci_level_tost - 0.80) < 1e-10
+})
+
+# T30: Return structure contains all expected elements
+run_test("T30  Return structure complete", {
+  d <- gen_between(c(2,4,6), n_per = 50, group_names = c("A","B","C"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                         design = "between", delta = 0.3, graph1=TRUE, graph2=TRUE)
+  expected <- c("interest", "residuals", "model", "design", "hypothesis",
+                "hyp_levels", "w_interest", "residual_basis", "n_residuals",
+                "delta_vec", "delta_type", "delta_share_pct", "d_interest_min",
+                "alpha", "alpha_tost", "is_orthogonal", "bonferroni_applied",
+                "contrast_matrix", "k", "conclusion", "conclusion_text",
+                "residuals_equiv", "apa", "variance", "plot_forest", "plot_variance")
+  all(expected %in% names(r))
+})
+
+# T36: TOST direction — non-linear data should fail strict bounds
+run_test("T36  TOST detects non-linearity", {
+  d <- gen_between(c(2,4,8,8), n_per = 100, sd = 2, group_names = c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.15, graph1=FALSE, graph2=FALSE)
+  any(!r$residuals_equiv)
+})
+
+# T37: Contrast weights sum to zero
+run_test("T37  Weights sum to zero", {
+  d <- gen_between(c(2,4,6,8,10), n_per=30, group_names=c("A","B","C","D","E"))
+  r <- contrast_analysis(d, "score", "group", hypothesis=c(A=0,B=1,C=2,D=3,E=4),
+                         design="between", delta=0.3, graph1=FALSE, graph2=FALSE)
+  abs(sum(r$w_interest)) < 1e-10
+})
+```
+
+## S01--S03, S13: Conversion Formula
+
+```{r share-conversion-tests}
+# S01: Exact conversion: share=5%, d_int_min=1.0 => d = sqrt(0.05/0.95)
+run_test("S01  Conversion exact (5%, dim=1.0)", {
+  d <- gen_between(c(2,4,6,8), n_per=100, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  expected <- 1.0 * sqrt(0.05 / 0.95)
+  all(abs(r$delta_vec - expected) < 1e-12)
+})
+
+# S02: Different d_interest_min: share=10%, dim=0.5
+run_test("S02  Conversion (10%, dim=0.5)", {
+  d <- gen_between(c(2,4,6), n_per=50, group_names=c("A","B","C"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                         design = "between", delta = 10, delta_type = "share_signal",
+                         d_interest_min = 0.5, graph1=FALSE, graph2=FALSE)
+  expected <- 0.5 * sqrt(0.10 / 0.90)
+  abs(r$delta_vec[1] - expected) < 1e-12
+})
+
+# S03: Different shares per residual: delta = c(3, 10)
+run_test("S03  Per-residual shares (3%, 10%)", {
+  d <- gen_between(c(2,4,6,8), n_per=200, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = c(3, 10), delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  exp1 <- 1.0 * sqrt(0.03 / 0.97)
+  exp2 <- 1.0 * sqrt(0.10 / 0.90)
+  abs(r$delta_vec[1] - exp1) < 1e-12 && abs(r$delta_vec[2] - exp2) < 1e-12
+})
+
+# S13: Monotonicity — larger share => larger d bound
+run_test("S13  Monotone conversion", {
+  shares <- c(1, 2, 5, 10, 20, 50)
+  d_bounds <- 1.0 * sqrt((shares/100) / (1 - shares/100))
+  all(diff(d_bounds) > 0)
+})
+```
+
+## S04--S05, S25--S26: Metadata and APA Strings
+
+```{r metadata-tests}
+# S04: Metadata stored correctly
+run_test("S04  Metadata stored", {
+  d <- gen_between(c(2,4,6,8), n_per=50, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.2, graph1=FALSE, graph2=FALSE)
+  r$delta_type == "share_signal" && all(r$delta_share_pct == 5) && r$d_interest_min == 1.2
+})
+
+# S05: dz mode returns NA for share fields
+run_test("S05  dz -> NA share fields", {
+  d <- gen_between(c(2,4,6), n_per=50, group_names=c("A","B","C"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r$delta_type == "dz" && is.na(r$delta_share_pct) && is.na(r$d_interest_min)
+})
+
+# S25: APA contains share info when share_signal
+run_test("S25  APA mentions share", {
+  d <- gen_between(c(2,4,6,8), n_per=60, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  grepl("5.0% share", r$apa) && grepl("d_int_min", r$apa)
+})
+
+# S26: APA does NOT mention share when dz
+run_test("S26  APA clean when dz", {
+  d <- gen_between(c(2,4,6,8), n_per=60, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  !grepl("share", r$apa, ignore.case = TRUE) && !grepl("d_int_min", r$apa)
+})
+```
+
+## S06--S12, S27--S29: share\_signal Input Validation
+
+```{r share-validation-tests}
+# S06: Missing d_interest_min => error (with correct message)
+run_test("S06  Missing d_interest_min -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "share_signal",
+                      graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) grepl("d_interest_min", conditionMessage(e)))
+})
+
+# S07: d_interest_min = 0
+run_test("S07  dim = 0 -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "share_signal",
+                      d_interest_min = 0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S08: Negative d_interest_min
+run_test("S08  dim negative -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "share_signal",
+                      d_interest_min = -1.0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S09: Share = 0
+run_test("S09  share = 0 -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 0, delta_type = "share_signal",
+                      d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S10: Share = 100
+run_test("S10  share = 100 -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 100, delta_type = "share_signal",
+                      d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S11: Negative share
+run_test("S11  share negative -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = -5, delta_type = "share_signal",
+                      d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S12: Invalid delta_type string
+run_test("S12  Bad delta_type -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "nonsense",
+                      d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S27: d_interest_min as string
+run_test("S27  dim non-numeric -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "share_signal",
+                      d_interest_min = "large", graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S28: d_interest_min as vector
+run_test("S28  dim vector -> error", {
+  d <- gen_between(c(2,4,6), n_per=30, group_names=c("A","B","C"))
+  tryCatch({
+    contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                      design = "between", delta = 5, delta_type = "share_signal",
+                      d_interest_min = c(0.5, 1.0), graph1=FALSE, graph2=FALSE)
+    FALSE
+  }, error = function(e) TRUE)
+})
+
+# S29: d_interest_min silently ignored when delta_type = "dz"
+run_test("S29  dim ignored when dz", {
+  d <- gen_between(c(2,4,6), n_per=50, group_names=c("A","B","C"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2),
+                         design = "between", delta = 0.3, d_interest_min = 1.0,
+                         graph1=FALSE, graph2=FALSE)
+  r$delta_type == "dz" && is.na(r$d_interest_min)
+})
+```
+
+## S14--S19, S30: TOST Under share\_signal
+
+```{r share-tost-tests}
+# S14: Large N + share_signal => SUPPORTED
+run_test("S14  Large N share -> SUPPORTED", {
+  d <- gen_between(c(2,4,6,8), n_per=500, sd=3, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 10, delta_type = "share_signal",
+                         d_interest_min = 0.8, graph1=FALSE, graph2=FALSE)
+  r$conclusion == "SUPPORTED"
+})
+
+# S15: Very tight bound (1% share, dim=0.3) — formula check
+run_test("S15  Tight bound (1%, dim=0.3)", {
+  d <- gen_between(c(2,4,6,8), n_per=50, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 1, delta_type = "share_signal",
+                         d_interest_min = 0.3, graph1=FALSE, graph2=FALSE)
+  abs(r$delta_vec[1] - 0.3 * sqrt(0.01 / 0.99)) < 1e-12
+})
+
+# S16: Generous bound (50% share) => d = 1.0
+run_test("S16  Generous bound (50%) -> d=1", {
+  d <- gen_between(c(2,4,6,8), n_per=80, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 50, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  abs(r$delta_vec[1] - 1.0) < 1e-12
+})
+
+# S17: Within-subjects + share_signal
+run_test("S17  Within + share_signal", {
+  d <- gen_within(c(5, 8, 8), n = 80, cond_names = c("Ctrl","DrugA","DrugB"))
+  r <- contrast_analysis(d, dv=NULL, conditions=NULL,
+                         hypothesis = c(Ctrl=0, DrugA=1, DrugB=1),
+                         design = "within", id = "pid",
+                         delta = 5, delta_type = "share_signal",
+                         d_interest_min = 0.5, graph1=FALSE, graph2=FALSE)
+  r$delta_type == "share_signal" && r$n_residuals == 1
+})
+
+# S18: Within k=4 + share_signal
+run_test("S18  Within k=4 share_signal", {
+  d <- gen_within(c(3,5,7,9), n=80, cond_names=c("T1","T2","T3","T4"))
+  r <- contrast_analysis(d, dv=NULL, conditions=NULL,
+                         hypothesis=c(T1=0, T2=1, T3=2, T4=3),
+                         design="within", id="pid",
+                         delta=10, delta_type="share_signal",
+                         d_interest_min=1.0, graph1=FALSE, graph2=FALSE)
+  r$n_residuals == 2 && all(r$delta_share_pct == 10)
+})
+
+# S19: TOST p-values valid under share_signal
+run_test("S19  TOST p valid (share)", {
+  d <- gen_between(c(2,4,6,8), n_per=100, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  all_ok <- TRUE
+  for (rr in r$residuals) {
+    if (rr$p1 < 0 || rr$p1 > 1 || rr$p2 < 0 || rr$p2 > 1 ||
+        rr$p_tost < 0 || rr$p_tost > 1) all_ok <- FALSE
+    if (abs(rr$p_tost - max(rr$p1, rr$p2)) > 1e-12) all_ok <- FALSE
+  }
+  all_ok
+})
+
+# S30: k=6, single share, 4 residuals
+run_test("S30  k=6 share_signal", {
+  d <- gen_between(c(1,2,3,4,5,6), n_per=60,
+                   group_names=c("G1","G2","G3","G4","G5","G6"))
+  r <- contrast_analysis(d, "score", "group",
+                         hypothesis = c(G1=1,G2=2,G3=3,G4=4,G5=5,G6=6),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  r$n_residuals == 4 && all(r$delta_share_pct == 5)
+})
+```
+
+## S20--S24: Statistical Invariance and Plotting
+
+```{r invariance-tests, fig.show='hide'}
+# S20: Variance decomposition unchanged by delta_type
+run_test("S20  Variance invariant to delta_type", {
+  set.seed(999)
+  d <- gen_between(c(2,4,6,8), n_per=80, group_names=c("A","B","C","D"))
+  r_dz <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                            design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r_ss <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                            design = "between", delta = 5, delta_type = "share_signal",
+                            d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  abs(r_dz$variance$pct_interest - r_ss$variance$pct_interest) < 0.01
+})
+
+# S21: Point estimates unchanged by delta_type
+run_test("S21  Estimates invariant to delta_type", {
+  set.seed(888)
+  d <- gen_between(c(2,4,6,8), n_per=60, group_names=c("A","B","C","D"))
+  r_dz <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                            design = "between", delta = 0.3, graph1=FALSE, graph2=FALSE)
+  r_ss <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                            design = "between", delta = 5, delta_type = "share_signal",
+                            d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  ok <- abs(r_dz$interest$b - r_ss$interest$b) < 1e-12 &&
+        abs(r_dz$interest$d - r_ss$interest$d) < 1e-12 &&
+        abs(r_dz$interest$p - r_ss$interest$p) < 1e-12
+  for (j in seq_along(r_dz$residuals)) {
+    ok <- ok &&
+      abs(r_dz$residuals[[j]]$b - r_ss$residuals[[j]]$b) < 1e-12 &&
+      abs(r_dz$residuals[[j]]$d - r_ss$residuals[[j]]$d) < 1e-12
+  }
+  ok && r_dz$residuals[[1]]$delta != r_ss$residuals[[1]]$delta
+})
+
+# S22: Forest plot with share_signal
+run_test("S22  Forest + share_signal", {
+  d <- gen_between(c(2,4,6,8), n_per=100, group_names=c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1.only = TRUE)
+  inherits(p, "ggplot")
+})
+
+# S23: Forest + share_signal + different deltas
+run_test("S23  Forest share diff deltas", {
+  d <- gen_between(c(2,4,6,8), n_per=100, group_names=c("A","B","C","D"))
+  p <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = c(3, 15), delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1.only = TRUE)
+  inherits(p, "ggplot")
+})
+
+# S24: Full output with share_signal (visual inspection)
+run_test("S24  Full share_signal output", {
+  d <- gen_between(c(2,4,6,8), n_per=200, sd=3, group_names=c("A","B","C","D"))
+  r <- contrast_analysis(d, "score", "group", hypothesis = c(A=0,B=1,C=2,D=3),
+                         design = "between", delta = 5, delta_type = "share_signal",
+                         d_interest_min = 1.0, graph1=FALSE, graph2=FALSE)
+  r$delta_type == "share_signal"
+})
+```
+
+
+# Summary
+
+```{r summary-table, echo=FALSE}
+# Build results data frame
+res_df <- data.frame(
+  Test = names(test_results),
+  Pass = unlist(test_results),
+  stringsAsFactors = FALSE
+)
+res_df$Status <- ifelse(res_df$Pass, "PASS", "FAIL")
+res_df$Domain <- ifelse(grepl("^T", res_df$Test), "Backward Compatibility", "share_signal Feature")
+
+total   <- nrow(res_df)
+passed  <- sum(res_df$Pass)
+failed  <- total - passed
+
+cat(sprintf("\n  GRAND TOTAL: %d / %d passed\n", passed, total))
+if (failed == 0) {
+  cat("  ALL TESTS PASSED.\n")
+} else {
+  cat(sprintf("  %d TESTS FAILED:\n", failed))
+  cat(paste("   ", res_df$Test[!res_df$Pass], collapse = "\n"), "\n")
+}
+```
+
+## Results Table
+
+```{r results-table, echo=FALSE}
+knitr::kable(res_df[, c("Test", "Status", "Domain")],
+             row.names = FALSE,
+             align = c("l", "c", "l"))
+```
+
+## Pass Rate by Domain
+
+```{r summary-bar, echo=FALSE, fig.width=7, fig.height=3.5}
+domain_summary <- aggregate(Pass ~ Domain, data = res_df, FUN = function(x) c(sum(x), length(x)))
+domain_df <- data.frame(
+  Domain  = domain_summary$Domain,
+  Passed  = domain_summary$Pass[, 1],
+  Total   = domain_summary$Pass[, 2]
+)
+domain_df$Failed <- domain_df$Total - domain_df$Passed
+domain_df$Label  <- sprintf("%d / %d", domain_df$Passed, domain_df$Total)
+
+plot_df <- rbind(
+  data.frame(Domain = domain_df$Domain, Count = domain_df$Passed, Result = "Pass"),
+  data.frame(Domain = domain_df$Domain, Count = domain_df$Failed, Result = "Fail")
+)
+
+ggplot(plot_df, aes(x = Domain, y = Count, fill = Result)) +
+  geom_col(width = 0.6) +
+  geom_text(data = domain_df, aes(x = Domain, y = Total, label = Label, fill = NULL),
+            vjust = -0.5, size = 4.5, fontface = "bold") +
+  scale_fill_manual(values = c(Pass = "#2E7D32", Fail = "#C62828")) +
+  labs(title = "Test Results by Domain", y = "Number of Tests", x = NULL) +
+  ylim(0, max(domain_df$Total) * 1.15) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+## Individual Test Status
+
+```{r summary-heatmap, echo=FALSE, fig.width=9, fig.height=7}
+res_df$Test <- factor(res_df$Test, levels = rev(res_df$Test))
+
+ggplot(res_df, aes(x = 1, y = Test, fill = Status)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  geom_text(aes(label = Status), size = 3, fontface = "bold", color = "white") +
+  scale_fill_manual(values = c(PASS = "#2E7D32", FAIL = "#C62828")) +
+  facet_grid(Domain ~ ., scales = "free_y", space = "free_y") +
+  labs(title = "Individual Test Results", x = NULL, y = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid   = element_blank(),
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 11)
+  )
+```

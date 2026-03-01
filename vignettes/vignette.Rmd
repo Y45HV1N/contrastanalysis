@@ -5,11 +5,15 @@ author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"
     affiliation: "University of Innsbruck"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Tutorial: Contrast Analysis with Equivalence Testing}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+date: "Last updated: `r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: tango
+    code_folding: show
+    self_contained: true
+    use_bookdown: true
+    fig_width: 7
+    fig_height: 4.5
 ---
 
 ```{r setup, include=FALSE}

@@ -13,8 +13,8 @@ vignette: >
 ---
 
 ```{css, echo=FALSE}
-img { max-width: 100%; height: auto; }
-.main-container { max-width: 1000px; }
+body { max-width: 900px !important; }
+img, .figure img { max-width: 100% !important; height: auto !important; display: block; }
 pre { overflow-x: auto; }
 ```
 
@@ -24,8 +24,8 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   fig.align = "center",
-  fig.width = 7,
-  fig.height = 4.5,
+  fig.width = 5.5,
+  fig.height = 3.5,
   out.width = "100%"
 )
 ```

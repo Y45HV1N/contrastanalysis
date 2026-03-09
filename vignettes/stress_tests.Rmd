@@ -13,8 +13,8 @@ vignette: >
 ---
 
 ```{css, echo=FALSE}
-img { max-width: 100%; height: auto; }
-.main-container { max-width: 1000px; }
+body { max-width: 900px !important; }
+img, .figure img { max-width: 100% !important; height: auto !important; display: block; }
 pre { overflow-x: auto; }
 ```
 
@@ -24,8 +24,8 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   fig.align = "center",
-  fig.width = 8,
-  fig.height = 5,
+  fig.width = 5.5,
+  fig.height = 4,
   out.width = "100%"
 )
 ```
@@ -872,7 +872,7 @@ knitr::kable(res_df[, c("Test", "Status", "Domain")],
 
 ## Pass Rate by Domain
 
-```{r summary-bar, echo=FALSE, fig.width=7, fig.height=3.5}
+```{r summary-bar, echo=FALSE, fig.width=5.5, fig.height=3.5}
 domain_summary <- aggregate(Pass ~ Domain, data = res_df, FUN = function(x) c(sum(x), length(x)))
 domain_df <- data.frame(
   Domain  = domain_summary$Domain,
@@ -900,7 +900,7 @@ ggplot(plot_df, aes(x = Domain, y = Count, fill = Result)) +
 
 ## Individual Test Status
 
-```{r summary-heatmap, echo=FALSE, fig.width=9, fig.height=7}
+```{r summary-heatmap, echo=FALSE, fig.width=5.5, fig.height=7}
 res_df$Test <- factor(res_df$Test, levels = rev(res_df$Test))
 
 ggplot(res_df, aes(x = 1, y = Test, fill = Status)) +

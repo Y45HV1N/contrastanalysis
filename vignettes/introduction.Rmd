@@ -1,6 +1,6 @@
 ---
 title: "Introducing Planned Contrast Analysis"
-subtitle: "Why You Should Stop Relying on ANOVA Alone... and What to Do Instead"
+subtitle: "Why You Should Stop Relying on ANOVA Alone — and What to Do Instead"
 author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"
@@ -13,8 +13,8 @@ vignette: >
 ---
 
 ```{css, echo=FALSE}
-img { max-width: 100%; height: auto; }
-.main-container { max-width: 1000px; }
+body { max-width: 900px !important; }
+img, .figure img { max-width: 100% !important; height: auto !important; display: block; }
 pre { overflow-x: auto; }
 ```
 
@@ -24,8 +24,8 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   fig.align = "center",
-  fig.width = 7,
-  fig.height = 4.5,
+  fig.width = 5.5,
+  fig.height = 3.5,
   out.width = "100%"
 )
 ```
@@ -56,7 +56,7 @@ possibilities.
 
 Let's make this concrete with a visualization.
 
-```{r anova-problem-visual, echo=FALSE, fig.width=9, fig.height=4}
+```{r anova-problem-visual, echo=FALSE, fig.width=5.5, fig.height=4}
 set.seed(1)
 
 # Three very different patterns, all producing significant ANOVAs
@@ -119,7 +119,7 @@ A researcher predicts that increasing the difficulty of a cognitive task
 (Low, Medium, Hard, Extreme) will produce a linear increase in response
 time. She runs the experiment with 50 participants per group.
 
-```{r eyeball-example-A, echo=FALSE, fig.width=8, fig.height=5}
+```{r eyeball-example-A, echo=FALSE, fig.width=5.5, fig.height=4}
 set.seed(77)
 n_ey <- 50
 
@@ -191,7 +191,7 @@ and the entire ANOVA is being driven by the Extreme condition. The
 researcher's linear theory does not describe these data. She just didn't
 test it.
 
-```{r eyeball-truth-A, echo=FALSE, fig.width=8, fig.height=3.5}
+```{r eyeball-truth-A, echo=FALSE, fig.width=5.5, fig.height=3.5}
 p2
 ```
 
@@ -208,7 +208,7 @@ A developmental psychologist hypothesizes that children's reading
 fluency increases linearly from ages 6 to 9 (four age groups). She
 collects data and gets a significant ANOVA.
 
-```{r eyeball-example-B, echo=FALSE, fig.width=8, fig.height=5}
+```{r eyeball-example-B, echo=FALSE, fig.width=5.5, fig.height=4}
 set.seed(88)
 n_ey2 <- 45
 
@@ -277,7 +277,7 @@ developmental phenomenon (perhaps a reorganization period), or it
 could be a methodological problem in the Age 7 group. Either way, the
 linear claim is **wrong**, and the eyeballing approach failed to catch it.
 
-```{r eyeball-truth-B, echo=FALSE, fig.width=8, fig.height=3.5}
+```{r eyeball-truth-B, echo=FALSE, fig.width=5.5, fig.height=3.5}
 p4
 ```
 
@@ -335,7 +335,7 @@ Bonferroni, Tukey). These corrections raise the bar for significance,
 making it harder to detect real effects — especially in the comparisons
 you actually care about.
 
-```{r posthoc-problem, echo=FALSE, fig.width=7, fig.height=3.5}
+```{r posthoc-problem, echo=FALSE, fig.width=5.5, fig.height=3.5}
 alphas <- data.frame(
   Groups     = 3:8,
   Comparisons = sapply(3:8, function(x) x*(x-1)/2),
@@ -455,7 +455,7 @@ Think of it this way: if your theory says the data should be a straight
 line, the residuals capture any curvature, bumps, or irregularities in the
 actual pattern.
 
-```{r decomposition-visual, echo=FALSE, fig.width=9, fig.height=4}
+```{r decomposition-visual, echo=FALSE, fig.width=5.5, fig.height=4}
 set.seed(42)
 observed <- c(2.1, 3.8, 7.2, 8.0)
 predicted <- c(2, 4, 6, 8)
@@ -507,7 +507,7 @@ traditional NHST-based residual tests have dangerously low power. In
 practice, researchers routinely "confirm" their predicted patterns simply
 by failing to reject a null they were never powered to detect.
 
-```{r power-problem-visual, echo=FALSE, fig.width=7, fig.height=4}
+```{r power-problem-visual, echo=FALSE, fig.width=5.5, fig.height=4}
 n_range <- seq(20, 200, by = 5)
 power_vals <- sapply(n_range, function(n) {
   power.t.test(n = n, delta = 0.3, sd = 1, sig.level = 0.05,
@@ -565,7 +565,7 @@ you'd consider negligible. Then:
 If both one-sided tests are significant, the residual falls entirely within
 your equivalence bounds. You can conclude it is **equivalent to zero**.
 
-```{r tost-visual, echo=FALSE, fig.width=8, fig.height=3}
+```{r tost-visual, echo=FALSE, fig.width=5.5, fig.height=3}
 df_tost <- data.frame(
   x = seq(-0.8, 0.8, length.out = 300),
   y = dnorm(seq(-0.8, 0.8, length.out = 300), mean = 0.05, sd = 0.12)
@@ -607,7 +607,7 @@ detect it."
 Putting both halves together, `contrast_analysis()` yields one of three
 conclusions:
 
-```{r conclusions-visual, echo=FALSE, fig.width=8, fig.height=3.5}
+```{r conclusions-visual, echo=FALSE, fig.width=5.5, fig.height=3.5}
 conclusions <- data.frame(
   Conclusion = factor(
     c("SUPPORTED", "PARTIALLY SUPPORTED", "NOT SUPPORTED"),

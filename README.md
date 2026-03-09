@@ -61,10 +61,11 @@ result <- contrast_analysis(
 
 ## Documentation
 
+- **Introduction (beginner-friendly):** [https://Y45HV1N.github.io/contrastanalysis/introduction.html](https://Y45HV1N.github.io/contrastanalysis/introduction.html)
 - **Tutorial (main):** [https://Y45HV1N.github.io/contrastanalysis/](https://Y45HV1N.github.io/contrastanalysis/)
 - **Tutorial (designs):** [https://Y45HV1N.github.io/contrastanalysis/designs_tutorial.html](https://Y45HV1N.github.io/contrastanalysis/designs_tutorial.html)
 - **Stress tests:** [https://Y45HV1N.github.io/contrastanalysis/stress_tests.html](https://Y45HV1N.github.io/contrastanalysis/stress_tests.html)
-- **Vignettes (after installing):** `vignette("tutorial", package = "contrastanalysis")`, `vignette("designs_tutorial", package = "contrastanalysis")`
+- **Vignettes (after installing):** `vignette("introduction", package = "contrastanalysis")`, `vignette("tutorial", package = "contrastanalysis")`, `vignette("designs_tutorial", package = "contrastanalysis")`
 - **Help page:** `?contrast_analysis`
 
 ## Citation

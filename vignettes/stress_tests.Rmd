@@ -5,13 +5,7 @@ author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"
     affiliation: "University of Innsbruck"
-date: "Last updated: `r Sys.Date()`"
-output:
-  rmdformats::readthedown:
-    highlight: tango
-    code_folding: show
-    self_contained: true
-    use_bookdown: true
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Validation: Stress Tests}
   %\VignetteEngine{knitr::rmarkdown}

@@ -1,19 +1,11 @@
 ---
-title: "Introducing Planned Contrast Analysis"
-subtitle: "Why You Should Stop Relying on ANOVA Alone... and What to Do Instead"
+title: "Introducing to Planned Contrast Analysis"
+subtitle: "Why You Should Stop Relying on ANOVA Alone — and What to Do Instead"
 author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"
     affiliation: "University of Innsbruck"
-date: "Last updated: `r Sys.Date()`"
-output:
-  rmdformats::readthedown:
-    highlight: tango
-    code_folding: show
-    self_contained: true
-    use_bookdown: true
-    fig_width: 7
-    fig_height: 4.5
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to Planned Contrast Analysis}
   %\VignetteEngine{knitr::rmarkdown}

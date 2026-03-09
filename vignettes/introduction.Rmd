@@ -1,6 +1,6 @@
 ---
-title: "Introducing to Planned Contrast Analysis"
-subtitle: "Why You Should Stop Relying on ANOVA Alone — and What to Do Instead"
+title: "Introducing Planned Contrast Analysis"
+subtitle: "Why You Should Stop Relying on ANOVA Alone... and What to Do Instead"
 author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"
@@ -12,6 +12,12 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{css, echo=FALSE}
+img { max-width: 100%; height: auto; }
+.main-container { max-width: 1000px; }
+pre { overflow-x: auto; }
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo    = TRUE,
@@ -19,7 +25,8 @@ knitr::opts_chunk$set(
   warning = FALSE,
   fig.align = "center",
   fig.width = 7,
-  fig.height = 4.5
+  fig.height = 4.5,
+  out.width = "100%"
 )
 ```
 

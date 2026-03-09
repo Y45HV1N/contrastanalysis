@@ -1,6 +1,6 @@
 ---
-title: "Introduction to Planned Contrast Analysis"
-subtitle: "Why You Should Stop Relying on ANOVA Alone — and What to Do Instead"
+title: "Introducing Planned Contrast Analysis"
+subtitle: "Why You Should Stop Relying on ANOVA Alone... and What to Do Instead"
 author:
   - name: "Yashvin Seetahul"
     orcid_id: "0000-0001-7487-3398"

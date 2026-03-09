@@ -1,5 +1,5 @@
 ---
-title: "Tutorial: Contrast Analysis with Equivalence Testing"
+title: "Vignette: Contrast Analysis with Equivalence Testing"
 subtitle: "A Beginner-Friendly Guide to `contrast_analysis()`"
 author:
   - name: "Yashvin Seetahul"

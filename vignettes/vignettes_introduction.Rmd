@@ -14,6 +14,10 @@ output:
     use_bookdown: true
     fig_width: 7
     fig_height: 4.5
+vignette: >
+  %\VignetteIndexEntry{Introduction to Planned Contrast Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

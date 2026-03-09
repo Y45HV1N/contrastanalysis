@@ -12,8 +12,10 @@ output:
     code_folding: show
     self_contained: true
     use_bookdown: true
-    fig_width: 7
-    fig_height: 4.5
+vignette: >
+  %\VignetteIndexEntry{Tutorial: Contrast Analysis with Equivalence Testing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

@@ -84,7 +84,7 @@ of the variance, and you would never know.
 This function offers a principled middle ground. Instead of relying on
 non-significance (which proves nothing), it uses **equivalence testing**
 (TOST; Lakens, 2017) to affirmatively demonstrate that residual
-deviations are *negligibly small* --- smaller than a threshold you
+deviations are *negligibly small*, i.e., smaller than a threshold you
 pre-specify. This shifts the burden of proof: rather than hoping the
 residuals "aren't significant," you now provide positive statistical
 evidence that they fall within bounds you consider trivial. Following
@@ -92,8 +92,7 @@ Campbell (2024), the equivalence test is applied to standardized
 regression coefficients from the contrast model.
 
 The result is a framework that lets you both (1) establish that the
-predicted effect exists and (2) rule out meaningful alternative patterns
---- the full Contrast + Residual logic, done correctly.
+predicted effect exists and (2) rule out meaningful alternative patterns: the full Contrast + Residual logic, done correctly.
 
 ## The Three Possible Conclusions
 
@@ -789,7 +788,7 @@ result_full <- contrast_analysis(
 )
 ```
 
-**Note the hypothesis values.** We didn't use c(0, 1, 2, 3) --- we used
+**Note the hypothesis values.** We didn't use c(0, 1, 2, 3), we used
 c(0, 1, 3, 5) to match the actual hours of exposure. This means we're
 predicting that aggression scales with actual dose, not ordinal position.
 The spacing matters: we expect the jump from 1hr to 3hr to be twice as

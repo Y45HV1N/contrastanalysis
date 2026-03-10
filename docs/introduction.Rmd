@@ -628,7 +628,7 @@ detect it."
 Putting both halves together, `contrast_analysis()` yields one of three
 conclusions:
 
-```{r conclusions-visual, echo=FALSE, fig.width=8, fig.height=3.5}
+```{r conclusions-visual, echo=FALSE, out.width="100%", fig.height=3.5}
 conclusions <- data.frame(
   Conclusion = factor(
     c("SUPPORTED", "PARTIALLY SUPPORTED", "NOT SUPPORTED"),
@@ -643,10 +643,10 @@ ggplot(conclusions, aes(x = Conclusion, y = 1)) +
   geom_tile(aes(fill = Color), width = 0.85, height = 0.6, color = "white", linewidth = 1.5) +
   geom_text(aes(y = 1.1, label = Interest), size = 3.5, fontface = "bold") +
   geom_text(aes(y = 0.9, label = Residuals), size = 3) +
-  annotate("text", x = 0.3, y = 1.1, label = "Interest:", fontface = "italic",
-           size = 3, color = "grey40") +
-  annotate("text", x = 0.3, y = 0.9, label = "Residuals:", fontface = "italic",
-           size = 3, color = "grey40") +
+  annotate("text", x = 0.50, y = 1.1, label = "C", fontface = "italic",
+           size = 4, color = "black") +
+  annotate("text", x = 0.50, y = 0.9, label = "R", fontface = "italic",
+           size = 4, color = "black") +
   scale_fill_identity() +
   labs(title = "The Three Possible Conclusions") +
   theme_void(base_size = 13) +
